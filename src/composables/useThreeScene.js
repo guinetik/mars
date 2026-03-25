@@ -36,8 +36,8 @@ const DEFAULTS = {
   bloomRadius: 0.4,
   bloomThreshold: 0.8,
   vignette: true,
-  vignetteOffset: 1.0,
-  vignetteDarkness: 1.1,
+  vignetteOffset: 1.2,
+  vignetteDarkness: 0.5,
 }
 
 export function useThreeScene(opts = {}) {
