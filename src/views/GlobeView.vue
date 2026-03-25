@@ -89,11 +89,24 @@ onMounted(async () => {
   controls.dampingFactor = 0.05
   controls.minDistance = 0.5
   controls.maxDistance = 20
+  controls.enableZoom = false // we handle zoom manually for smooth lerp
 
   // Reset orbit target to origin when user starts interacting
   controls.addEventListener('start', () => {
     controls.target.set(0, 0, 0)
   })
+
+  // Smooth zoom
+  let targetDistance = camera.position.length()
+  const ZOOM_LERP = 0.08
+  const ZOOM_FACTOR = 0.08
+
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? 1 : -1
+    targetDistance *= 1 + delta * ZOOM_FACTOR
+    targetDistance = Math.max(0.5, Math.min(20, targetDistance))
+  }, { passive: false })
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
   scene.add(ambientLight)
@@ -213,7 +226,16 @@ onMounted(async () => {
       if (t >= 1) {
         flyToActive = false
         controls.enabled = true
+        targetDistance = camera.position.distanceTo(controls.target)
       }
+    }
+
+    // Smooth zoom lerp
+    if (!flyToActive) {
+      const dir = camera.position.clone().sub(controls.target).normalize()
+      const currentDist = camera.position.distanceTo(controls.target)
+      const newDist = currentDist + (targetDistance - currentDist) * ZOOM_LERP
+      camera.position.copy(controls.target).addScaledVector(dir, newDist)
     }
 
     controls.update()
