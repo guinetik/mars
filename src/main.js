@@ -18,14 +18,20 @@ document.body.appendChild(renderer.domElement)
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
 controls.dampingFactor = 0.05
+controls.minDistance = 0.5
+controls.maxDistance = 20
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0x404040)
+// Lighting — bright enough to see terrain features from all angles
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
 scene.add(ambientLight)
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.5)
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.0)
 dirLight.position.set(5, 3, 5)
 scene.add(dirLight)
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.4)
+fillLight.position.set(-3, -1, -3)
+scene.add(fillLight)
 
 // Load globe
 const loader = new GLTFLoader()
@@ -46,6 +52,16 @@ loader.load(
       const scale = 2 / maxDim
       model.scale.setScalar(scale)
     }
+    // Override material so terrain features are clearly visible
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.material = new THREE.MeshPhongMaterial({
+          color: 0xcccccc,
+          flatShading: false,
+          shininess: 0
+        })
+      }
+    })
     scene.add(model)
     loadingEl.style.display = 'none'
   },
