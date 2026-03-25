@@ -5,8 +5,7 @@ import { latLonToCartesian, surfaceNormal } from '@/lib/areography/coordinates.j
 import { GLOBE_RADIUS, FLY_TO_DISTANCE } from './constants.js'
 
 const BEAM_HEIGHT = 0.06       // beam height relative to globe radius
-const BEAM_WIDTH = 0.002       // beam width relative to globe radius
-const RING_SCALE = 0.012       // glow ring radius relative to globe radius
+const BEAM_WIDTH = 0.003       // beam width at base relative to globe radius
 const PICK_THROTTLE_FRAMES = 3
 
 export class MarsLandmarks {
@@ -38,14 +37,32 @@ export class MarsLandmarks {
   async init() {
     const beamHeight = this.radius * BEAM_HEIGHT
     const beamWidth = this.radius * BEAM_WIDTH
-    const ringRadius = this.radius * RING_SCALE
 
-    // Shared geometries
-    const beamGeo = new THREE.PlaneGeometry(beamWidth, beamHeight)
-    beamGeo.translate(0, beamHeight / 2, 0)
-    const ringGeo = new THREE.RingGeometry(ringRadius * 0.3, ringRadius, 24)
-    // Small invisible sphere for raycasting — much easier to click than a thin beam
+    // Tapered beam geometry — wide at base, zero at top
+    // Two crossed planes with vertex colors for fade
+    const beamGeo = this._createBeamGeometry(beamWidth, beamHeight)
+
+    // Invisible sphere for raycasting
     this.pinGeometry = new THREE.SphereGeometry(beamHeight * 0.4, 6, 6)
+
+    // Shared beam shader — uses vertex alpha for the taper fade
+    const beamShader = {
+      vertexShader: /* glsl */`
+        attribute float alpha;
+        varying float vAlpha;
+        void main() {
+          vAlpha = alpha;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        uniform vec3 uColor;
+        varying float vAlpha;
+        void main() {
+          gl_FragColor = vec4(uColor, vAlpha);
+        }
+      `,
+    }
 
     for (const landmark of this.landmarks) {
       const normal = surfaceNormal(landmark.lat, landmark.lon)
@@ -54,30 +71,18 @@ export class MarsLandmarks {
 
       const pinGroup = new THREE.Group()
 
-      // Light beam — two crossed planes for visibility from any angle
-      const beamMat = new THREE.MeshBasicMaterial({
-        color,
+      // Light beam — tapered, fades to transparent at top
+      const beamMat = new THREE.ShaderMaterial({
+        uniforms: { uColor: { value: color } },
+        vertexShader: beamShader.vertexShader,
+        fragmentShader: beamShader.fragmentShader,
         transparent: true,
-        opacity: 0.4,
         side: THREE.DoubleSide,
         depthWrite: false,
+        blending: THREE.AdditiveBlending,
       })
-      const beam1 = new THREE.Mesh(beamGeo, beamMat)
-      const beam2 = new THREE.Mesh(beamGeo, beamMat)
-      beam2.rotation.y = Math.PI / 2
-      pinGroup.add(beam1)
-      pinGroup.add(beam2)
-
-      // Base ring
-      const ringMat = new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.3,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      })
-      const ring = new THREE.Mesh(ringGeo, ringMat)
-      pinGroup.add(ring)
+      const beam = new THREE.Mesh(beamGeo, beamMat)
+      pinGroup.add(beam)
 
       // Invisible hit target for raycasting
       const hitMat = new THREE.MeshBasicMaterial({ visible: false })
@@ -118,7 +123,28 @@ export class MarsLandmarks {
     }
 
     beamGeo.dispose()
-    ringGeo.dispose()
+  }
+
+  _createBeamGeometry(width, height) {
+    // Two crossed quads, each tapered: wide at base (y=0), zero width at top (y=height)
+    // Alpha: 0.5 at base, 0.0 at top
+    const hw = width / 2
+    const verts = new Float32Array([
+      // Plane 1
+      -hw, 0, 0,    hw, 0, 0,    0, height, 0,
+      hw, 0, 0,    -hw, 0, 0,    0, height, 0,
+      // Plane 2
+      0, 0, -hw,    0, 0, hw,    0, height, 0,
+      0, 0, hw,    0, 0, -hw,    0, height, 0,
+    ])
+    const alphas = new Float32Array([
+      0.5, 0.5, 0.0,   0.5, 0.5, 0.0,
+      0.5, 0.5, 0.0,   0.5, 0.5, 0.0,
+    ])
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(verts, 3))
+    geo.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1))
+    return geo
   }
 
   getLandmarkTarget(id) {
