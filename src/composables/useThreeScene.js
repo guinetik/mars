@@ -35,7 +35,7 @@ const DEFAULTS = {
   bloomStrength: 0.35,
   bloomRadius: 0.4,
   bloomThreshold: 0.8,
-  vignette: true,
+  vignette: false,
   vignetteOffset: 1.2,
   vignetteDarkness: 0.5,
 }
