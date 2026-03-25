@@ -135,6 +135,53 @@ def build_faces(rows: int, cols: int) -> np.ndarray:
     return np.array(faces, dtype=np.int32)
 
 
+def compute_normals(vertices: np.ndarray, faces: np.ndarray) -> np.ndarray:
+    """Compute per-vertex normals averaged from adjacent face normals."""
+    normals = np.zeros_like(vertices)
+
+    v0 = vertices[faces[:, 0]]
+    v1 = vertices[faces[:, 1]]
+    v2 = vertices[faces[:, 2]]
+
+    edge1 = v1 - v0
+    edge2 = v2 - v0
+    face_normals = np.cross(edge1, edge2)
+
+    for i in range(3):
+        np.add.at(normals, faces[:, i], face_normals)
+
+    lengths = np.linalg.norm(normals, axis=1, keepdims=True)
+    lengths[lengths < 1e-10] = 1.0
+    normals /= lengths
+
+    return normals.astype(np.float32)
+
+
+def export_glb(vertices: np.ndarray, faces: np.ndarray, normals: np.ndarray,
+               uvs: np.ndarray, output_path: str):
+    """Export mesh as GLB using trimesh."""
+    import trimesh
+
+    mesh = trimesh.Trimesh(
+        vertices=vertices,
+        faces=faces,
+        vertex_normals=normals,
+    )
+    mesh.visual = trimesh.visual.TextureVisuals(uv=uvs)
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+
+    print(f"Exporting to {output_path}...")
+    t0 = time.time()
+    mesh.export(output_path, file_type="glb")
+    dt = time.time() - t0
+
+    size_mb = os.path.getsize(output_path) / (1024 * 1024)
+    print(f"Exported {output_path} ({size_mb:.1f} MB) in {dt:.1f}s")
+    print(f"  Vertices: {len(vertices):,}")
+    print(f"  Faces: {len(faces):,}")
+
+
 def load_and_downsample(input_path: str, target_resolution: int) -> np.ndarray:
     """Load GeoTIFF and downsample to target resolution. Returns 2D elevation array in meters."""
     from osgeo import gdal
@@ -211,8 +258,35 @@ def main():
         print(f"Place it at: {args.input}")
         sys.exit(1)
 
+    # 1. Load and downsample
     elevation = load_and_downsample(args.input, args.resolution)
-    print(f"\nLoaded elevation grid: {elevation.shape[1]} x {elevation.shape[0]}")
+    rows, cols = elevation.shape
+
+    # 2. Map to sphere
+    print("Mapping to sphere...")
+    t0 = time.time()
+    vertices, uvs = grid_to_sphere(elevation, args.exaggeration)
+    print(f"Sphere mapping: {time.time() - t0:.1f}s")
+
+    # 3. Collapse poles
+    print("Collapsing poles...")
+    vertices, uvs = collapse_poles(vertices, uvs, rows, cols)
+
+    # 4. Build faces
+    print("Building faces...")
+    faces = build_faces(rows, cols)
+    print(f"Faces: {len(faces):,}")
+
+    # 5. Compute normals
+    print("Computing normals...")
+    t0 = time.time()
+    normals = compute_normals(vertices, faces)
+    print(f"Normals: {time.time() - t0:.1f}s")
+
+    # 6. Export
+    export_glb(vertices, faces, normals, uvs, args.output)
+
+    print("\nDone!")
 
 
 if __name__ == "__main__":
