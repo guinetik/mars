@@ -113,7 +113,7 @@ def build_faces(rows: int, cols: int) -> np.ndarray:
     for c in range(cols - 1):
         v0 = 1 + c
         v1 = 1 + c + 1
-        faces.append([north_pole, v0, v1])
+        faces.append([north_pole, v1, v0])
 
     # Middle rows: standard quad strips
     for r in range(rows - 3):
@@ -122,15 +122,15 @@ def build_faces(rows: int, cols: int) -> np.ndarray:
             tr = tl + 1
             bl = tl + cols
             br = bl + 1
-            faces.append([tl, bl, tr])
-            faces.append([tr, bl, br])
+            faces.append([tl, tr, bl])
+            faces.append([tr, br, bl])
 
     # South pole fan: connect last middle row to pole
     last_row_start = 1 + (rows - 3) * cols
     for c in range(cols - 1):
         v0 = last_row_start + c
         v1 = last_row_start + c + 1
-        faces.append([v0, south_pole, v1])
+        faces.append([v0, v1, south_pole])
 
     return np.array(faces, dtype=np.int32)
 
