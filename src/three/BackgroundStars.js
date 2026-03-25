@@ -7,7 +7,11 @@ const POINT_SIZE = 1.4
 export class BackgroundStars {
   root
 
-  constructor() {
+  /**
+   * @param {number} [radius] - star sphere radius (defaults to STAR_SPHERE_RADIUS)
+   */
+  constructor(radius) {
+    const sphereRadius = radius ?? STAR_SPHERE_RADIUS
     const positions = new Float32Array(STAR_COUNT * 3)
     const sizes = new Float32Array(STAR_COUNT)
     const opacities = new Float32Array(STAR_COUNT)
@@ -17,9 +21,9 @@ export class BackgroundStars {
     for (let i = 0; i < STAR_COUNT; i++) {
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(2 * Math.random() - 1)
-      positions[i * 3] = STAR_SPHERE_RADIUS * Math.sin(phi) * Math.cos(theta)
-      positions[i * 3 + 1] = STAR_SPHERE_RADIUS * Math.cos(phi)
-      positions[i * 3 + 2] = STAR_SPHERE_RADIUS * Math.sin(phi) * Math.sin(theta)
+      positions[i * 3] = sphereRadius * Math.sin(phi) * Math.cos(theta)
+      positions[i * 3 + 1] = sphereRadius * Math.cos(phi)
+      positions[i * 3 + 2] = sphereRadius * Math.sin(phi) * Math.sin(theta)
 
       sizes[i] = POINT_SIZE * (0.5 + Math.random() * 0.8)
       opacities[i] = 0.58 + Math.random() * 0.38

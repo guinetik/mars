@@ -6,9 +6,9 @@ import { RouterLink } from 'vue-router'
   <nav class="navbar">
     <RouterLink to="/" class="brand">MARS</RouterLink>
     <div class="links">
-      <RouterLink to="/" exact-active-class="active">Globe</RouterLink>
-      <RouterLink to="/about" active-class="active">About</RouterLink>
+      <RouterLink to="/" exact-active-class="active">Elevation Globe</RouterLink>
       <RouterLink to="/gis" active-class="active">Mars GIS</RouterLink>
+      <RouterLink to="/about" active-class="active">About</RouterLink>
     </div>
   </nav>
 </template>
@@ -22,9 +22,9 @@ import { RouterLink } from 'vue-router'
   height: var(--nav-height);
   background: var(--bg);
   border-bottom: 1px solid var(--border);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 0 1.5rem;
   z-index: 100;
 }

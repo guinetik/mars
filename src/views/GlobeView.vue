@@ -6,13 +6,14 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { colorSchemes, createElevationMaterial } from '@/lib/colorSchemes.js'
 import { MarsLandmarks } from '@/three/MarsLandmarks.js'
+import { BackgroundStars } from '@/three/BackgroundStars.js'
 import { useMarsData } from '@/composables/useMarsData.js'
 import LandmarkTooltip from '@/components/gis/LandmarkTooltip.vue'
 import LandmarkInfoCard from '@/components/gis/LandmarkInfoCard.vue'
+import LoadingOverlay from '@/components/gis/LoadingOverlay.vue'
 
 const container = ref(null)
 const css2dRef = ref(null)
-const loadingText = ref('Loading Mars globe...')
 const isLoading = ref(true)
 const activeScheme = ref('elevation')
 
@@ -29,6 +30,7 @@ let renderer, css2dRenderer, scene, camera, controls, animationId
 let resizeHandler, keyHandler
 let elevationMaterial = null
 let landmarks = null
+let stars = null
 const pointer = new THREE.Vector2(-999, -999)
 
 // Fly-to state
@@ -70,7 +72,7 @@ onMounted(async () => {
   scene.background = new THREE.Color(0x0a0a0a)
   clock = new THREE.Clock()
 
-  camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000)
+  camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 2000)
   camera.position.set(0, 0, 3)
 
   renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -159,16 +161,15 @@ onMounted(async () => {
       await landmarks.init()
       scene.add(landmarks.root)
 
+      // Stars — scale to ~80x the globe radius
+      stars = new BackgroundStars(meanRadius * 80)
+      scene.add(stars.root)
+
       isLoading.value = false
     },
-    (progress) => {
-      if (progress.total > 0) {
-        const pct = ((progress.loaded / progress.total) * 100).toFixed(0)
-        loadingText.value = `Loading Mars globe... ${pct}%`
-      }
-    },
+    undefined,
     (error) => {
-      loadingText.value = `Error loading globe: ${error.message}`
+      isLoading.value = false
       console.error('GLB load error:', error)
     }
   )
@@ -217,11 +218,12 @@ onMounted(async () => {
 
     controls.update()
 
-    // Update landmarks
+    // Update landmarks + stars
     if (landmarks && camera) {
       landmarks.pick(pointer, camera)
       landmarks.updateVisibility(camera)
     }
+    if (stars) stars.update(elapsed)
 
     renderer.render(scene, camera)
     css2dRenderer.render(scene, camera)
@@ -236,6 +238,7 @@ onUnmounted(() => {
   controls?.dispose()
   renderer?.dispose()
   landmarks?.dispose()
+  stars?.dispose()
   if (elevationMaterial) {
     if (elevationMaterial._rampTexture) elevationMaterial._rampTexture.dispose()
     elevationMaterial.dispose()
@@ -253,7 +256,7 @@ onUnmounted(() => {
 <template>
   <div ref="container" class="globe-container">
     <div ref="css2dRef" class="css2d-overlay" />
-    <div v-if="isLoading" class="loading">{{ loadingText }}</div>
+    <LoadingOverlay :is-loading="isLoading" :loaded="0" :total="0" />
     <div v-if="!isLoading" class="controls-panel">
       <label class="control-label">Color</label>
       <select
@@ -290,16 +293,6 @@ onUnmounted(() => {
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-}
-
-.loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
 }
 
 .controls-panel {
