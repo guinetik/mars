@@ -126,8 +126,8 @@ onMounted(async () => {
 
   setClickHandler((ptr, cam) => landmarks.clickTest(ptr, cam))
 
-  // Stars
-  stars = new BackgroundStars(globeRadius * 80)
+  // Stars — use fewer, further away for the smaller globe
+  stars = new BackgroundStars(globeRadius * 40, { count: 6000, pointSize: 0.6 })
   scene.add(stars.root)
 
   // Start render loop
