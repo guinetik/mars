@@ -11,6 +11,10 @@ import { ref } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 
 const DEFAULTS = {
   fov: 45,
@@ -26,6 +30,14 @@ const DEFAULTS = {
   zoomFactor: 0.08,
   dampingFactor: 0.02,
   clearColor: 0x000000,
+  // Post-processing
+  bloom: true,
+  bloomStrength: 0.35,
+  bloomRadius: 0.4,
+  bloomThreshold: 0.8,
+  vignette: true,
+  vignetteOffset: 1.0,
+  vignetteDarkness: 1.1,
 }
 
 export function useThreeScene(opts = {}) {
@@ -35,6 +47,7 @@ export function useThreeScene(opts = {}) {
   const currentTarget = ref(new THREE.Vector3())
 
   let renderer = null
+  let composer = null
   let css2dRenderer = null
   let camera = null
   let controls = null
@@ -151,11 +164,57 @@ export function useThreeScene(opts = {}) {
     camera.aspect = w / h
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
+    composer?.setSize(w, h)
     css2dRenderer.setSize(w, h)
   }
 
   function startLoop(scene, onUpdate) {
     updateCallback = onUpdate
+
+    // Set up post-processing
+    composer = new EffectComposer(renderer)
+    composer.addPass(new RenderPass(scene, camera))
+
+    if (config.bloom) {
+      const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(renderer.domElement.clientWidth, renderer.domElement.clientHeight),
+        config.bloomStrength,
+        config.bloomRadius,
+        config.bloomThreshold,
+      )
+      composer.addPass(bloomPass)
+    }
+
+    if (config.vignette) {
+      const vignettePass = new ShaderPass({
+        uniforms: {
+          tDiffuse: { value: null },
+          offset: { value: config.vignetteOffset },
+          darkness: { value: config.vignetteDarkness },
+        },
+        vertexShader: /* glsl */`
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: /* glsl */`
+          uniform sampler2D tDiffuse;
+          uniform float offset;
+          uniform float darkness;
+          varying vec2 vUv;
+          void main() {
+            vec4 color = texture2D(tDiffuse, vUv);
+            float dist = distance(vUv, vec2(0.5));
+            float vig = smoothstep(0.8, offset * 0.5, dist * (darkness + offset));
+            color.rgb *= vig;
+            gl_FragColor = color;
+          }
+        `,
+      })
+      composer.addPass(vignettePass)
+    }
 
     function animate() {
       animationId = requestAnimationFrame(animate)
@@ -209,7 +268,7 @@ export function useThreeScene(opts = {}) {
       currentZoom.value = 1 - (dist - config.minDistance) / (config.maxDistance - config.minDistance)
       currentTarget.value.copy(controls.target)
 
-      renderer.render(scene, camera)
+      composer.render()
       css2dRenderer.render(scene, camera)
     }
 

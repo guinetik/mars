@@ -34,11 +34,15 @@ export class MarsScene {
     this.scene.add(this.stars.root)
 
     // Lighting
-    const sunLight = new THREE.DirectionalLight(0xffffff, 1.5)
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.2)
     sunLight.position.set(5, 3, 4)
     this.scene.add(sunLight)
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3)
+    // Hemisphere light — sky/ground gradient so the dark side isn't a void
+    const hemiLight = new THREE.HemisphereLight(0x8899aa, 0x443322, 0.4)
+    this.scene.add(hemiLight)
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.15)
     this.scene.add(ambientLight)
   }
 
