@@ -142,7 +142,7 @@ export function createElevationMaterial(scheme) {
         vec3 hemiColor = mix(uGroundColor, uSkyColor, hemi);
 
         // Combine: sun drives the main illumination, hemisphere fills the dark side
-        vec3 lighting = hemiColor * 0.3 + vec3(1.0) * sun * 0.75;
+        vec3 lighting = hemiColor * 0.45 + vec3(1.0) * sun * 0.7;
 
         gl_FragColor = vec4(baseColor * lighting, 1.0);
       }
