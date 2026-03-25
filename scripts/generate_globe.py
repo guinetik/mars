@@ -24,6 +24,51 @@ def parse_args():
     return p.parse_args()
 
 
+MARS_RADIUS = 3389500.0  # meters
+
+
+def grid_to_sphere(elevation: np.ndarray, exaggeration: float) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Convert equirectangular elevation grid to sphere vertices.
+
+    Args:
+        elevation: 2D array (height x width) of elevation values in meters
+        exaggeration: vertical exaggeration multiplier
+
+    Returns:
+        vertices: (N, 3) float32 array of XYZ positions on unit sphere
+        uvs: (N, 2) float32 array of UV coordinates [0,1]
+    """
+    h, w = elevation.shape
+    rows = np.arange(h, dtype=np.float32)
+    cols = np.arange(w, dtype=np.float32)
+    col_grid, row_grid = np.meshgrid(cols, rows)
+
+    # Lat/lon in radians
+    # Note: we use (w-1) and (h-1) so the last column/row maps exactly to
+    # +pi longitude and -pi/2 latitude, avoiding a one-pixel gap at the seam.
+    lon = (col_grid / (w - 1)) * 2 * np.pi - np.pi  # [-pi, pi]
+    lat = np.pi / 2 - (row_grid / (h - 1)) * np.pi   # [pi/2, -pi/2]
+
+    # Radius: unit sphere + scaled elevation displacement
+    r = 1.0 + (elevation * exaggeration) / MARS_RADIUS
+
+    # Spherical to Cartesian (Y-up, right-handed)
+    cos_lat = np.cos(lat)
+    x = r * cos_lat * np.cos(lon)
+    y = r * np.sin(lat)
+    z = r * cos_lat * np.sin(lon)
+
+    vertices = np.stack([x.ravel(), y.ravel(), z.ravel()], axis=1).astype(np.float32)
+
+    # UV coordinates
+    u = col_grid / (w - 1)
+    v = row_grid / (h - 1)
+    uvs = np.stack([u.ravel(), v.ravel()], axis=1).astype(np.float32)
+
+    return vertices, uvs
+
+
 def load_and_downsample(input_path: str, target_resolution: int) -> np.ndarray:
     """Load GeoTIFF and downsample to target resolution. Returns 2D elevation array in meters."""
     from osgeo import gdal
