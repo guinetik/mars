@@ -210,3 +210,7 @@ __marimo__/
 data/
 output/
 node_modules/
+
+# Allow JS source directories that match generic Python ignore patterns above
+!src/lib/
+!public/data/
