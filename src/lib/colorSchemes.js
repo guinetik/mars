@@ -20,6 +20,23 @@ export const colorSchemes = [
     ]
   },
   {
+    id: 'hypsometric',
+    name: 'Hypsometric',
+    stops: [
+      { t: 0.00, color: '#0000aa' },
+      { t: 0.15, color: '#0044cc' },
+      { t: 0.25, color: '#00aacc' },
+      { t: 0.35, color: '#00cc66' },
+      { t: 0.45, color: '#44dd00' },
+      { t: 0.55, color: '#ccdd00' },
+      { t: 0.65, color: '#ffcc00' },
+      { t: 0.75, color: '#ff8800' },
+      { t: 0.85, color: '#ff3300' },
+      { t: 0.95, color: '#cc0000' },
+      { t: 1.00, color: '#880000' },
+    ]
+  },
+  {
     id: 'elevation',
     name: 'Elevation',
     stops: [
