@@ -1,6 +1,7 @@
 <template>
   <div class="gis-view">
     <MarsCanvas
+      ref="marsCanvasRef"
       @ready="onReady"
       @hover="onHover"
       @select="onSelect"
@@ -21,6 +22,7 @@
       :loaded="tilesLoaded"
       :total="tilesTotal"
     />
+    <LandmarkLegend v-if="!isLoading" @filter="onFilter" />
   </div>
 </template>
 
@@ -30,7 +32,9 @@ import MarsCanvas from '@/components/gis/MarsCanvas.vue'
 import LandmarkTooltip from '@/components/gis/LandmarkTooltip.vue'
 import LandmarkInfoCard from '@/components/gis/LandmarkInfoCard.vue'
 import LoadingOverlay from '@/components/gis/LoadingOverlay.vue'
+import LandmarkLegend from '@/components/gis/LandmarkLegend.vue'
 
+const marsCanvasRef = ref(null)
 const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
 const isLoading = ref(true)
@@ -62,6 +66,10 @@ function onSelect(landmark) {
 function onProgress(loaded, total) {
   tilesLoaded.value = loaded
   tilesTotal.value = total
+}
+
+function onFilter(hiddenTypes) {
+  marsCanvasRef.value?.setFilter(hiddenTypes)
 }
 
 function onKeyDown(e) {

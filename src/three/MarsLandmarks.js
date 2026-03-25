@@ -15,9 +15,11 @@ export class MarsLandmarks {
   labelObjects = []
   normals = []
   landmarkMap = new Map()
+  pinGroups = []          // { group, label, landmark } for filtering
   pinGeometry = null
   frameCount = 0
   hoveredMesh = null
+  hiddenTypes = new Set()
   _worldPos = new THREE.Vector3()
   _camDir = new THREE.Vector3()
 
@@ -101,6 +103,10 @@ export class MarsLandmarks {
       this.pinMeshes.push(hitSphere)
       this.landmarkMap.set(hitSphere, landmark)
 
+      // Track for filtering
+      const entry = { group: pinGroup, label: null, landmark }
+      this.pinGroups.push(entry)
+
       // Label
       const labelDiv = document.createElement('div')
       labelDiv.className = 'landmark-label'
@@ -117,12 +123,34 @@ export class MarsLandmarks {
       const label = new CSS2DObject(labelDiv)
       label.position.copy(surfacePos).addScaledVector(normal, beamHeight * 1.1)
       this.root.add(label)
+      entry.label = label
 
       this.labelObjects.push(label)
       this.normals.push(normal)
     }
 
     beamGeo.dispose()
+  }
+
+  /**
+   * Get the filter type key for a landmark (matches LANDMARK_COLORS keys).
+   */
+  getLandmarkType(landmark) {
+    return landmark.type === 'landing-site' ? 'landing-site' : landmark.featureType
+  }
+
+  /**
+   * Set which types are visible. Hidden types get their beams + labels hidden.
+   * @param {Set<string>} hiddenTypes - set of type keys to hide
+   */
+  setFilter(hiddenTypes) {
+    this.hiddenTypes = hiddenTypes
+    for (const entry of this.pinGroups) {
+      const type = this.getLandmarkType(entry.landmark)
+      const hidden = hiddenTypes.has(type)
+      entry.group.visible = !hidden
+      if (entry.label) entry.label.visible = !hidden
+    }
   }
 
   _createBeamGeometry(width, height) {
@@ -205,7 +233,12 @@ export class MarsLandmarks {
       const worldNormal = normal.clone().applyQuaternion(this.root.getWorldQuaternion(new THREE.Quaternion()))
 
       const dot = worldNormal.dot(this._camDir)
-      const visible = dot > 0.05 // small threshold to hide at grazing angles
+      const facing = dot > 0.05
+
+      // Respect type filter
+      const type = this.getLandmarkType(this.landmarks[i])
+      const filtered = this.hiddenTypes.has(type)
+      const visible = facing && !filtered
 
       pin.visible = visible
       label.visible = visible

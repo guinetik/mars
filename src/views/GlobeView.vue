@@ -10,6 +10,7 @@ import { useMarsData } from '@/composables/useMarsData.js'
 import LandmarkTooltip from '@/components/gis/LandmarkTooltip.vue'
 import LandmarkInfoCard from '@/components/gis/LandmarkInfoCard.vue'
 import LoadingOverlay from '@/components/gis/LoadingOverlay.vue'
+import LandmarkLegend from '@/components/gis/LandmarkLegend.vue'
 
 // --- State ---
 
@@ -43,6 +44,10 @@ let scene = null
 let elevationMaterial = null
 let landmarks = null
 let stars = null
+
+function onFilter(hiddenTypes) {
+  if (landmarks) landmarks.setFilter(hiddenTypes)
+}
 
 function onSchemeChange(schemeId) {
   activeScheme.value = schemeId
@@ -202,6 +207,7 @@ function loadGLB(url) {
       :landmark="selectedLandmark"
       @close="selectedLandmark = null"
     />
+    <LandmarkLegend v-if="!isLoading" @filter="onFilter" />
   </div>
 </template>
 

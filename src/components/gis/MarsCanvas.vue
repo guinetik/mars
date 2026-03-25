@@ -63,6 +63,12 @@ onMounted(async () => {
   emit('ready')
 })
 
+function setFilter(hiddenTypes) {
+  marsScene?.landmarks.setFilter(hiddenTypes)
+}
+
+defineExpose({ setFilter })
+
 onUnmounted(() => {
   marsScene?.dispose()
   dispose()
