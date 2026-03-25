@@ -84,11 +84,17 @@ export function createElevationMaterial(scheme) {
       uRamp: { value: ramp },
       uMinRadius: { value: 0.0 },
       uMaxRadius: { value: 1.0 },
+      uLightDir: { value: new THREE.Vector3(5, 3, 5).normalize() },
+      uFillDir: { value: new THREE.Vector3(-3, -1, -3).normalize() },
     },
     vertexShader: /* glsl */`
       varying float vRadius;
+      varying vec3 vNormal;
+      varying vec3 vWorldPos;
       void main() {
         vRadius = length(position);
+        vNormal = normalize(normalMatrix * normal);
+        vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
@@ -96,11 +102,23 @@ export function createElevationMaterial(scheme) {
       uniform sampler2D uRamp;
       uniform float uMinRadius;
       uniform float uMaxRadius;
+      uniform vec3 uLightDir;
+      uniform vec3 uFillDir;
       varying float vRadius;
+      varying vec3 vNormal;
+      varying vec3 vWorldPos;
       void main() {
         float t = clamp((vRadius - uMinRadius) / (uMaxRadius - uMinRadius), 0.0, 1.0);
-        vec4 color = texture2D(uRamp, vec2(t, 0.5));
-        gl_FragColor = color;
+        vec3 baseColor = texture2D(uRamp, vec2(t, 0.5)).rgb;
+
+        // Diffuse lighting: main light + fill light + ambient
+        vec3 n = normalize(vNormal);
+        float diffuse = max(dot(n, uLightDir), 0.0);
+        float fill = max(dot(n, uFillDir), 0.0) * 0.35;
+        float ambient = 0.25;
+        float lighting = ambient + diffuse * 0.55 + fill;
+
+        gl_FragColor = vec4(baseColor * lighting, 1.0);
       }
     `,
   })
