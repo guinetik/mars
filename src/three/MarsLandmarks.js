@@ -4,9 +4,9 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { latLonToCartesian, surfaceNormal } from '@/lib/areography/coordinates.js'
 import { GLOBE_RADIUS, FLY_TO_DISTANCE } from './constants.js'
 
-const PIN_SCALE = 0.012        // pin head size relative to globe radius
-const SPIKE_SCALE = 0.04       // spike height relative to globe radius
-const RING_SCALE = 0.02        // glow ring radius relative to globe radius
+const BEAM_HEIGHT = 0.06       // beam height relative to globe radius
+const BEAM_WIDTH = 0.002       // beam width relative to globe radius
+const RING_SCALE = 0.012       // glow ring radius relative to globe radius
 const PICK_THROTTLE_FRAMES = 3
 
 export class MarsLandmarks {
@@ -36,69 +36,67 @@ export class MarsLandmarks {
   }
 
   async init() {
-    const headRadius = this.radius * PIN_SCALE
-    const spikeHeight = this.radius * SPIKE_SCALE
+    const beamHeight = this.radius * BEAM_HEIGHT
+    const beamWidth = this.radius * BEAM_WIDTH
     const ringRadius = this.radius * RING_SCALE
 
     // Shared geometries
-    this.pinGeometry = new THREE.SphereGeometry(headRadius, 12, 12)
-    const spikeGeo = new THREE.ConeGeometry(headRadius * 0.4, spikeHeight, 8)
-    spikeGeo.translate(0, spikeHeight / 2, 0)
-    const ringGeo = new THREE.RingGeometry(ringRadius * 0.6, ringRadius, 24)
+    const beamGeo = new THREE.PlaneGeometry(beamWidth, beamHeight)
+    beamGeo.translate(0, beamHeight / 2, 0)
+    const ringGeo = new THREE.RingGeometry(ringRadius * 0.3, ringRadius, 24)
+    // Small invisible sphere for raycasting — much easier to click than a thin beam
+    this.pinGeometry = new THREE.SphereGeometry(beamHeight * 0.4, 6, 6)
 
     for (const landmark of this.landmarks) {
       const normal = surfaceNormal(landmark.lat, landmark.lon)
-      const surfacePos = latLonToCartesian(landmark.lat, landmark.lon, this.radius * 1.002)
+      const surfacePos = latLonToCartesian(landmark.lat, landmark.lon, this.radius * 1.001)
       const color = new THREE.Color(landmark.accent)
 
-      // Pin group — spike + head, oriented along surface normal
       const pinGroup = new THREE.Group()
 
-      // Spike (tapered cone from surface upward)
-      const spikeMat = new THREE.MeshBasicMaterial({
+      // Light beam — two crossed planes for visibility from any angle
+      const beamMat = new THREE.MeshBasicMaterial({
         color,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.4,
+        side: THREE.DoubleSide,
+        depthWrite: false,
       })
-      const spike = new THREE.Mesh(spikeGeo, spikeMat)
-      pinGroup.add(spike)
+      const beam1 = new THREE.Mesh(beamGeo, beamMat)
+      const beam2 = new THREE.Mesh(beamGeo, beamMat)
+      beam2.rotation.y = Math.PI / 2
+      pinGroup.add(beam1)
+      pinGroup.add(beam2)
 
-      // Head (glassy sphere at top of spike)
-      const headMat = new THREE.MeshPhongMaterial({
-        color,
-        transparent: true,
-        opacity: 0.7,
-        shininess: 80,
-        emissive: color,
-        emissiveIntensity: 0.3,
-      })
-      const head = new THREE.Mesh(this.pinGeometry, headMat)
-      head.position.y = spikeHeight + headRadius * 0.5
-      pinGroup.add(head)
-
-      // Base ring (subtle glow on surface)
+      // Base ring
       const ringMat = new THREE.MeshBasicMaterial({
         color,
         transparent: true,
-        opacity: 0.25,
+        opacity: 0.3,
         side: THREE.DoubleSide,
         depthWrite: false,
       })
       const ring = new THREE.Mesh(ringGeo, ringMat)
-      ring.position.y = -0.001 // slightly below spike base
       pinGroup.add(ring)
 
-      // Orient pin group to point along surface normal
+      // Invisible hit target for raycasting
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false })
+      const hitSphere = new THREE.Mesh(this.pinGeometry, hitMat)
+      hitSphere.position.y = beamHeight * 0.5
+      pinGroup.add(hitSphere)
+
+      // Orient along surface normal
       pinGroup.position.copy(surfacePos)
-      const up = new THREE.Vector3(0, 1, 0)
-      const quat = new THREE.Quaternion().setFromUnitVectors(up, normal)
+      const quat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0), normal
+      )
       pinGroup.quaternion.copy(quat)
 
       this.root.add(pinGroup)
-      this.pinMeshes.push(head) // raycasting targets the head
-      this.landmarkMap.set(head, landmark)
+      this.pinMeshes.push(hitSphere)
+      this.landmarkMap.set(hitSphere, landmark)
 
-      // CSS2D label — positioned above the head
+      // Label
       const labelDiv = document.createElement('div')
       labelDiv.className = 'landmark-label'
       labelDiv.textContent = landmark.name
@@ -112,15 +110,14 @@ export class MarsLandmarks {
       labelDiv.style.whiteSpace = 'nowrap'
 
       const label = new CSS2DObject(labelDiv)
-      const labelOffset = spikeHeight + headRadius * 2
-      label.position.copy(surfacePos).addScaledVector(normal, labelOffset)
+      label.position.copy(surfacePos).addScaledVector(normal, beamHeight * 1.1)
       this.root.add(label)
 
       this.labelObjects.push(label)
       this.normals.push(normal)
     }
 
-    spikeGeo.dispose()
+    beamGeo.dispose()
     ringGeo.dispose()
   }
 
