@@ -69,6 +69,72 @@ def grid_to_sphere(elevation: np.ndarray, exaggeration: float) -> tuple[np.ndarr
     return vertices, uvs
 
 
+def collapse_poles(vertices: np.ndarray, uvs: np.ndarray, rows: int, cols: int) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Collapse north and south pole rows into single vertices each.
+
+    Input vertices are (rows*cols,3) from a full grid.
+    Output vertices are (2 + (rows-2)*cols, 3) — one north pole, middle rows, one south pole.
+    """
+    # North pole: average of row 0
+    north_pos = vertices[:cols].mean(axis=0, keepdims=True)
+    north_uv = np.array([[0.5, 0.0]], dtype=np.float32)
+
+    # South pole: average of last row
+    south_pos = vertices[-cols:].mean(axis=0, keepdims=True)
+    south_uv = np.array([[0.5, 1.0]], dtype=np.float32)
+
+    # Middle rows
+    mid_start = cols
+    mid_end = rows * cols - cols
+    mid_pos = vertices[mid_start:mid_end]
+    mid_uv = uvs[mid_start:mid_end]
+
+    collapsed_verts = np.concatenate([north_pos, mid_pos, south_pos], axis=0).astype(np.float32)
+    collapsed_uvs = np.concatenate([north_uv, mid_uv, south_uv], axis=0).astype(np.float32)
+
+    return collapsed_verts, collapsed_uvs
+
+
+def build_faces(rows: int, cols: int) -> np.ndarray:
+    """
+    Build triangle face indices for a pole-collapsed equirectangular sphere.
+
+    Vertex layout:
+      Index 0: north pole
+      Index 1 to (rows-2)*cols: middle rows (row 1 through row rows-2)
+      Last index: south pole
+    """
+    north_pole = 0
+    south_pole = 1 + (rows - 2) * cols
+    faces = []
+
+    # North pole fan: connect pole to first middle row
+    for c in range(cols - 1):
+        v0 = 1 + c
+        v1 = 1 + c + 1
+        faces.append([north_pole, v0, v1])
+
+    # Middle rows: standard quad strips
+    for r in range(rows - 3):
+        for c in range(cols - 1):
+            tl = 1 + r * cols + c
+            tr = tl + 1
+            bl = tl + cols
+            br = bl + 1
+            faces.append([tl, bl, tr])
+            faces.append([tr, bl, br])
+
+    # South pole fan: connect last middle row to pole
+    last_row_start = 1 + (rows - 3) * cols
+    for c in range(cols - 1):
+        v0 = last_row_start + c
+        v1 = last_row_start + c + 1
+        faces.append([v0, south_pole, v1])
+
+    return np.array(faces, dtype=np.int32)
+
+
 def load_and_downsample(input_path: str, target_resolution: int) -> np.ndarray:
     """Load GeoTIFF and downsample to target resolution. Returns 2D elevation array in meters."""
     from osgeo import gdal

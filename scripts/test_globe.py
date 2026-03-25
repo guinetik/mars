@@ -78,3 +78,35 @@ class TestGridToSphere:
         idx = 2 * 5 + 4
         assert abs(uvs[idx, 0] - 1.0) < 0.01
         assert abs(uvs[idx, 1] - 1.0) < 0.01
+
+
+from generate_globe import build_faces
+
+
+class TestBuildFaces:
+    """Test grid triangulation and pole collapsing."""
+
+    def test_simple_grid_face_count(self):
+        """A 4x5 grid should produce 16 faces with pole collapsing."""
+        faces = build_faces(rows=4, cols=5)
+        # rows=4, cols=5, after pole collapse:
+        # North fan: cols-1 = 4 triangles
+        # Middle strips: (rows-3) = 1 strip, (cols-1) = 4 quads, 2 tris each = 8
+        # South fan: cols-1 = 4 triangles
+        # Total: 4 + 8 + 4 = 16
+        assert len(faces) == 16
+
+    def test_faces_are_valid_indices(self):
+        """All face indices should be within vertex count range."""
+        rows, cols = 5, 8
+        faces = build_faces(rows, cols)
+        vertex_count = 2 + (rows - 2) * cols
+        for face in faces:
+            for idx in face:
+                assert 0 <= idx < vertex_count, f"Index {idx} out of range [0, {vertex_count})"
+
+    def test_all_triangles(self):
+        """All faces should be triangles (3 indices each)."""
+        faces = build_faces(rows=6, cols=10)
+        for face in faces:
+            assert len(face) == 3
