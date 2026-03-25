@@ -31,7 +31,7 @@ const DEFAULTS = {
   dampingFactor: 0.02,
   clearColor: 0x000000,
   // Post-processing
-  bloom: true,
+  bloom: false,
   bloomStrength: 0.2,
   bloomRadius: 0.3,
   bloomThreshold: 0.92,
