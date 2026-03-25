@@ -32,9 +32,9 @@ const DEFAULTS = {
   clearColor: 0x000000,
   // Post-processing
   bloom: true,
-  bloomStrength: 0.35,
-  bloomRadius: 0.4,
-  bloomThreshold: 0.8,
+  bloomStrength: 0.2,
+  bloomRadius: 0.3,
+  bloomThreshold: 0.92,
   vignette: false,
   vignetteOffset: 1.2,
   vignetteDarkness: 0.5,
