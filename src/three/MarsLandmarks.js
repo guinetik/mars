@@ -66,7 +66,7 @@ export class MarsLandmarks {
 
     for (const landmark of this.landmarks) {
       const normal = surfaceNormal(landmark.lat, landmark.lon)
-      const surfacePos = latLonToCartesian(landmark.lat, landmark.lon, this.radius * 1.001)
+      const surfacePos = latLonToCartesian(landmark.lat, landmark.lon, this.radius * 0.995)
       const color = new THREE.Color(landmark.accent)
 
       const pinGroup = new THREE.Group()
