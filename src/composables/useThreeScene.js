@@ -1,21 +1,36 @@
-// src/composables/useThreeScene.js
+/**
+ * Shared Three.js scene composable.
+ *
+ * Provides: WebGL + CSS2D renderers, camera, OrbitControls with smooth zoom,
+ * auto-rotate on idle, fly-to animation, pointer tracking, and resize handling.
+ *
+ * Both the Elevation Globe and Mars GIS pages use this — the only difference
+ * is the options passed in (camera distances, auto-rotate speed, etc.)
+ */
 import { ref } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
-import {
-  CAMERA_FOV,
-  CAMERA_NEAR,
-  CAMERA_FAR,
-  CAMERA_MIN_DISTANCE,
-  CAMERA_MAX_DISTANCE,
-  CAMERA_DEFAULT_DISTANCE,
-  AUTO_ROTATE_SPEED,
-  AUTO_ROTATE_RESUME_DELAY,
-  FLY_TO_DURATION,
-} from '@/three/constants.js'
 
-export function useThreeScene() {
+const DEFAULTS = {
+  fov: 45,
+  near: 0.1,
+  far: 2000,
+  minDistance: 1.2,
+  maxDistance: 40,
+  defaultDistance: 28,
+  autoRotateSpeed: 0.15,
+  autoRotateDelay: 3000,
+  flyToDuration: 1.5,
+  zoomLerp: 0.08,
+  zoomFactor: 0.08,
+  dampingFactor: 0.02,
+  clearColor: 0x000000,
+}
+
+export function useThreeScene(opts = {}) {
+  const config = { ...DEFAULTS, ...opts }
+
   const currentZoom = ref(0)
   const currentTarget = ref(new THREE.Vector3())
 
@@ -27,53 +42,54 @@ export function useThreeScene() {
   let animationId = 0
   let updateCallback = null
 
-  // Manual Y-axis auto-rotate
+  // Auto-rotate
   let isIdle = true
   let idleTimer = null
-  const AUTO_ROTATE_RAD_PER_SEC = AUTO_ROTATE_SPEED * Math.PI / 180 * 0.5
+  const autoRotateRad = config.autoRotateSpeed * Math.PI / 180 * 0.5
 
   // Smooth zoom
-  let targetDistance = CAMERA_DEFAULT_DISTANCE
-  const ZOOM_LERP = 0.08
-  const WHEEL_ZOOM_FACTOR = 0.08
+  let targetDistance = config.defaultDistance
 
-  // Fly-to state
+  // Fly-to
   let flyToActive = false
   let flyToStart = 0
-  let flyToStartPos = new THREE.Vector3()
-  let flyToEndPos = new THREE.Vector3()
-  let flyToStartTarget = new THREE.Vector3()
-  let flyToEndTarget = new THREE.Vector3()
+  const flyToStartPos = new THREE.Vector3()
+  const flyToEndPos = new THREE.Vector3()
+  const flyToStartTarget = new THREE.Vector3()
+  const flyToEndTarget = new THREE.Vector3()
   let flyToResolve = null
 
-  // Pointer tracking for raycaster
+  // Pointer
   const pointer = new THREE.Vector2(-999, -999)
+
+  // Click handler
+  let onClickCallback = null
 
   function init(canvas, css2dContainer) {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(canvas.clientWidth, canvas.clientHeight, false)
-    renderer.setClearColor(0x000000, 1)
+    renderer.setClearColor(config.clearColor, 1)
 
     css2dRenderer = new CSS2DRenderer({ element: css2dContainer })
     css2dRenderer.setSize(canvas.clientWidth, canvas.clientHeight)
 
     camera = new THREE.PerspectiveCamera(
-      CAMERA_FOV,
+      config.fov,
       canvas.clientWidth / canvas.clientHeight,
-      CAMERA_NEAR,
-      CAMERA_FAR,
+      config.near,
+      config.far,
     )
-    camera.position.set(0, 0, CAMERA_DEFAULT_DISTANCE)
+    camera.position.set(0, 0, config.defaultDistance)
 
     controls = new OrbitControls(camera, canvas)
     controls.enableDamping = true
-    controls.dampingFactor = 0.02
-    controls.minDistance = CAMERA_MIN_DISTANCE
-    controls.maxDistance = CAMERA_MAX_DISTANCE
-    controls.autoRotate = false  // we handle auto-rotate manually on Y axis
+    controls.dampingFactor = config.dampingFactor
+    controls.minDistance = config.minDistance
+    controls.maxDistance = config.maxDistance
+    controls.autoRotate = false
     controls.enablePan = false
-    controls.enableZoom = false  // we handle zoom manually for smooth lerp
+    controls.enableZoom = false
 
     controls.addEventListener('start', onInteractionStart)
     controls.addEventListener('end', onInteractionEnd)
@@ -89,9 +105,7 @@ export function useThreeScene() {
   function onInteractionStart() {
     isIdle = false
     if (controls && camera) {
-      // Reset orbit target to globe center when user starts dragging
       controls.target.set(0, 0, 0)
-      // Sync targetDistance to current actual distance so zoom doesn't jump
       targetDistance = camera.position.distanceTo(controls.target)
     }
     if (idleTimer) clearTimeout(idleTimer)
@@ -99,9 +113,7 @@ export function useThreeScene() {
 
   function onInteractionEnd() {
     if (idleTimer) clearTimeout(idleTimer)
-    idleTimer = setTimeout(() => {
-      isIdle = true
-    }, AUTO_ROTATE_RESUME_DELAY)
+    idleTimer = setTimeout(() => { isIdle = true }, config.autoRotateDelay)
   }
 
   function onPointerMove(e) {
@@ -114,17 +126,14 @@ export function useThreeScene() {
   function onWheel(e) {
     e.preventDefault()
     const delta = e.deltaY > 0 ? 1 : -1
-    targetDistance *= 1 + delta * WHEEL_ZOOM_FACTOR
-    targetDistance = Math.max(CAMERA_MIN_DISTANCE, Math.min(CAMERA_MAX_DISTANCE, targetDistance))
-    // Any interaction resets idle
+    targetDistance *= 1 + delta * config.zoomFactor
+    targetDistance = Math.max(config.minDistance, Math.min(config.maxDistance, targetDistance))
     isIdle = false
     if (idleTimer) clearTimeout(idleTimer)
-    idleTimer = setTimeout(() => { isIdle = true }, AUTO_ROTATE_RESUME_DELAY)
+    idleTimer = setTimeout(() => { isIdle = true }, config.autoRotateDelay)
   }
 
-  let onClickCallback = null
-
-  function onPointerClick(_e) {
+  function onPointerClick() {
     if (camera && onClickCallback) {
       onClickCallback(pointer, camera)
     }
@@ -137,12 +146,12 @@ export function useThreeScene() {
   function onResize() {
     const canvas = renderer?.domElement
     if (!canvas || !camera || !renderer || !css2dRenderer) return
-    const width = canvas.clientWidth
-    const height = canvas.clientHeight
-    camera.aspect = width / height
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
+    camera.aspect = w / h
     camera.updateProjectionMatrix()
-    renderer.setSize(width, height, false)
-    css2dRenderer.setSize(width, height)
+    renderer.setSize(w, h, false)
+    css2dRenderer.setSize(w, h)
   }
 
   function startLoop(scene, onUpdate) {
@@ -155,45 +164,49 @@ export function useThreeScene() {
       const elapsed = clock.getElapsedTime()
       const delta = clock.getDelta()
 
-      // Fly-to animation
+      // Fly-to
       if (flyToActive) {
-        const t = Math.min(1, (elapsed - flyToStart) / FLY_TO_DURATION)
-        const eased = t * t * (3 - 2 * t) // smoothstep
+        const t = Math.min(1, (elapsed - flyToStart) / config.flyToDuration)
+        const eased = t * t * (3 - 2 * t)
         camera.position.lerpVectors(flyToStartPos, flyToEndPos, eased)
         controls.target.lerpVectors(flyToStartTarget, flyToEndTarget, eased)
 
         if (t >= 1) {
           flyToActive = false
           controls.enabled = true
+          targetDistance = camera.position.distanceTo(controls.target)
           flyToResolve?.()
         }
       }
 
-      // Smooth zoom lerp
+      // Smooth zoom
       if (!flyToActive) {
         const dir = camera.position.clone().sub(controls.target).normalize()
         const currentDist = camera.position.distanceTo(controls.target)
-        const newDist = currentDist + (targetDistance - currentDist) * ZOOM_LERP
+        const newDist = currentDist + (targetDistance - currentDist) * config.zoomLerp
         camera.position.copy(controls.target).addScaledVector(dir, newDist)
       }
 
-      // Manual Y-axis auto-rotate when idle
+      // Auto-rotate when idle
       if (isIdle && !flyToActive) {
-        const angle = AUTO_ROTATE_RAD_PER_SEC * delta
+        const angle = autoRotateRad * delta
         const pos = camera.position.clone().sub(controls.target)
         const cosA = Math.cos(angle)
         const sinA = Math.sin(angle)
         const newX = pos.x * cosA + pos.z * sinA
         const newZ = -pos.x * sinA + pos.z * cosA
-        camera.position.set(newX + controls.target.x, camera.position.y, newZ + controls.target.z)
+        camera.position.set(
+          newX + controls.target.x,
+          camera.position.y,
+          newZ + controls.target.z
+        )
       }
 
       controls.update()
       updateCallback?.(elapsed)
 
-      // Update zoom ref
       const dist = camera.position.distanceTo(controls.target)
-      currentZoom.value = 1 - (dist - CAMERA_MIN_DISTANCE) / (CAMERA_MAX_DISTANCE - CAMERA_MIN_DISTANCE)
+      currentZoom.value = 1 - (dist - config.minDistance) / (config.maxDistance - config.minDistance)
       currentTarget.value.copy(controls.target)
 
       renderer.render(scene, camera)
@@ -214,7 +227,6 @@ export function useThreeScene() {
       flyToStartTarget.copy(controls.target)
       flyToEndTarget.copy(targetPosition)
 
-      // Position camera along the surface normal at the given distance
       const direction = targetPosition.clone().normalize()
       flyToEndPos.copy(targetPosition).addScaledVector(direction, distance)
 
@@ -223,13 +235,8 @@ export function useThreeScene() {
     })
   }
 
-  function getCamera() {
-    return camera
-  }
-
-  function getPointer() {
-    return pointer
-  }
+  function getCamera() { return camera }
+  function getPointer() { return pointer }
 
   function dispose() {
     if (animationId) cancelAnimationFrame(animationId)
