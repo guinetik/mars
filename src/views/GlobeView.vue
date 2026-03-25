@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { colorSchemes, createElevationMaterial, SUN_DIR } from '@/lib/colorSchemes.js'
+import { colorSchemes, createElevationMaterial } from '@/lib/colorSchemes.js'
 import { MarsLandmarks } from '@/three/MarsLandmarks.js'
 import { BackgroundStars } from '@/three/BackgroundStars.js'
 import { useThreeScene } from '@/composables/useThreeScene.js'
@@ -60,15 +60,14 @@ onMounted(async () => {
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0x0a0a0a)
 
-  // Lighting — one sun, matching the elevation shader's uSunDir
-  const sunLight = new THREE.DirectionalLight(0xffffff, 1.8)
-  sunLight.position.copy(SUN_DIR).multiplyScalar(10)
-  scene.add(sunLight)
-
-  const hemiLight = new THREE.HemisphereLight(0x8899aa, 0x553322, 0.6)
-  scene.add(hemiLight)
-
-  scene.add(new THREE.AmbientLight(0xffffff, 0.15))
+  // Lighting
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7))
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.0)
+  dirLight.position.set(5, 3, 5)
+  scene.add(dirLight)
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.4)
+  fillLight.position.set(-3, -1, -3)
+  scene.add(fillLight)
 
   // Elevation color material
   const defaultScheme = colorSchemes.find(s => s.id === activeScheme.value)

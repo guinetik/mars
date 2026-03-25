@@ -93,11 +93,6 @@ export function buildRampTexture(scheme) {
  * Create a ShaderMaterial that colors vertices by radial distance (elevation).
  * Call updateScheme() to swap color ramps without rebuilding the material.
  */
-/**
- * sunDir — shared sun direction. Both the shader and the scene lights should use this.
- */
-export const SUN_DIR = new THREE.Vector3(5, 3, 4).normalize()
-
 export function createElevationMaterial(scheme) {
   const ramp = buildRampTexture(scheme)
 
@@ -106,9 +101,8 @@ export function createElevationMaterial(scheme) {
       uRamp: { value: ramp },
       uMinRadius: { value: 0.0 },
       uMaxRadius: { value: 1.0 },
-      uSunDir: { value: SUN_DIR.clone() },
-      uSkyColor: { value: new THREE.Color(0x8899aa) },
-      uGroundColor: { value: new THREE.Color(0x553322) },
+      uLightDir: { value: new THREE.Vector3(5, 3, 5).normalize() },
+      uFillDir: { value: new THREE.Vector3(-3, -1, -3).normalize() },
     },
     vertexShader: /* glsl */`
       varying float vRadius;
@@ -123,9 +117,8 @@ export function createElevationMaterial(scheme) {
       uniform sampler2D uRamp;
       uniform float uMinRadius;
       uniform float uMaxRadius;
-      uniform vec3 uSunDir;
-      uniform vec3 uSkyColor;
-      uniform vec3 uGroundColor;
+      uniform vec3 uLightDir;
+      uniform vec3 uFillDir;
       varying float vRadius;
       varying vec3 vNormal;
       void main() {
@@ -133,16 +126,10 @@ export function createElevationMaterial(scheme) {
         vec3 baseColor = texture2D(uRamp, vec2(t, 0.5)).rgb;
 
         vec3 n = normalize(vNormal);
-
-        // Sun — primary directional light
-        float sun = max(dot(n, uSunDir), 0.0);
-
-        // Hemisphere fill — sky above, warm ground below
-        float hemi = dot(n, vec3(0.0, 1.0, 0.0)) * 0.5 + 0.5;
-        vec3 hemiColor = mix(uGroundColor, uSkyColor, hemi);
-
-        // Combine: sun drives the main illumination, hemisphere fills the dark side
-        vec3 lighting = hemiColor * 0.45 + vec3(1.0) * sun * 0.7;
+        float diffuse = max(dot(n, uLightDir), 0.0);
+        float fill = max(dot(n, uFillDir), 0.0) * 0.35;
+        float ambient = 0.25;
+        float lighting = ambient + diffuse * 0.55 + fill;
 
         gl_FragColor = vec4(baseColor * lighting, 1.0);
       }
