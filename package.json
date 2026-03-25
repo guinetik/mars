@@ -7,9 +7,12 @@
     "build": "vite build"
   },
   "dependencies": {
-    "three": "^0.172.0"
+    "three": "^0.172.0",
+    "vue": "^3.5.31",
+    "vue-router": "^5.0.4"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.5",
     "vite": "^6.0.0"
   }
 }
