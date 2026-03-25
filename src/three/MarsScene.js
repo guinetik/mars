@@ -23,12 +23,12 @@ export class MarsScene {
 
     // Parent group for all Mars-relative layers — tilted to Mars obliquity.
     // Globe, atmosphere, and landmarks all share this tilt so positions align.
-    const marsGroup = new THREE.Group()
-    marsGroup.rotation.z = MARS_OBLIQUITY_RAD
-    marsGroup.add(this.globe.root)
-    marsGroup.add(this.atmosphere.root)
-    marsGroup.add(this.landmarks.root)
-    this.scene.add(marsGroup)
+    this.marsGroup = new THREE.Group()
+    this.marsGroup.rotation.z = MARS_OBLIQUITY_RAD
+    this.marsGroup.add(this.globe.root)
+    this.marsGroup.add(this.atmosphere.root)
+    this.marsGroup.add(this.landmarks.root)
+    this.scene.add(this.marsGroup)
 
     // Stars are not tilted — they are scene-global
     this.scene.add(this.stars.root)

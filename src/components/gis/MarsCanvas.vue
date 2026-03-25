@@ -36,7 +36,12 @@ onMounted(async () => {
   marsScene.landmarks.onClick = (landmark) => {
     emit('select', landmark)
     const target = marsScene.landmarks.getLandmarkTarget(landmark.id)
-    if (target) flyTo(target.position, target.distance)
+    if (target) {
+      // Transform local landmark position to world space (accounts for Mars obliquity tilt)
+      marsScene.marsGroup.updateMatrixWorld()
+      const worldPos = target.position.clone().applyMatrix4(marsScene.marsGroup.matrixWorld)
+      flyTo(worldPos, target.distance)
+    }
   }
 
   setClickHandler((pointer, camera) => {
