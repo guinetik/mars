@@ -1,3 +1,9 @@
+<script setup>
+import { ref } from 'vue'
+
+const lightboxOpen = ref(false)
+</script>
+
 <template>
   <div class="about">
     <article class="content">
@@ -6,6 +12,23 @@
         A high-resolution 3D reconstruction of Mars' global topography, built from
         orbital elevation data collected by two spacecraft over two decades of observation.
       </p>
+
+      <figure class="cover" @click="lightboxOpen = true">
+        <picture>
+          <source srcset="/images/mola-preview.webp" type="image/webp" />
+          <img src="/images/mola-preview.png" alt="Mars HRSC-MOLA Blended DEM — global elevation map with hypsometric color ramp" loading="lazy" />
+        </picture>
+        <figcaption>
+          HRSC-MOLA Blended DEM &mdash; 106,694 &times; 53,347 pixels, 200m/px. Click to enlarge.
+        </figcaption>
+      </figure>
+
+      <Transition name="lightbox">
+        <div v-if="lightboxOpen" class="lightbox" @click="lightboxOpen = false">
+          <img src="/images/mola-preview.png" alt="Mars HRSC-MOLA Blended DEM — full resolution" />
+          <span class="lightbox-close">&times;</span>
+        </div>
+      </Transition>
 
       <section>
         <h2>Data Source</h2>
@@ -174,4 +197,67 @@ code {
   padding: 0.15em 0.4em;
   border-radius: 3px;
 }
+
+.cover {
+  margin: 0 -1rem 2.5rem;
+  cursor: pointer;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: border-color 0.2s;
+}
+
+.cover:hover {
+  border-color: var(--accent);
+}
+
+.cover img {
+  width: 100%;
+  display: block;
+}
+
+.cover figcaption {
+  padding: 0.6rem 1rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--surface);
+  letter-spacing: 0.02em;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  padding: 2rem;
+}
+
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 1rem;
+  right: 1.5rem;
+  font-size: 2rem;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.lightbox-close:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.lightbox-enter-active { transition: opacity 0.2s ease; }
+.lightbox-leave-active { transition: opacity 0.15s ease; }
+.lightbox-enter-from, .lightbox-leave-to { opacity: 0; }
 </style>
