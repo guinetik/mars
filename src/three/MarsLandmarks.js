@@ -5,7 +5,7 @@ import { latLonToCartesian, surfaceNormal } from '@/lib/areography/coordinates.j
 import { GLOBE_RADIUS, FLY_TO_DISTANCE } from './constants.js'
 
 const BEAM_HEIGHT = 0.06       // beam height relative to globe radius
-const BEAM_WIDTH = 0.003       // beam width at base relative to globe radius
+const BEAM_WIDTH = 0.008       // beam width at base relative to globe radius
 const PICK_THROTTLE_FRAMES = 3
 
 export class MarsLandmarks {
