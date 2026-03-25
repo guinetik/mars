@@ -1,28 +1,77 @@
 <template>
-  <div class="gis-placeholder">
-    <h1>Mars GIS</h1>
-    <p>Coming soon.</p>
+  <div class="gis-view">
+    <MarsCanvas
+      @ready="onReady"
+      @hover="onHover"
+      @select="onSelect"
+      @progress="onProgress"
+    />
+    <LandmarkTooltip
+      v-if="!isMobile"
+      :landmark="hoveredLandmark"
+      :x="tooltipX"
+      :y="tooltipY"
+    />
+    <LandmarkInfoCard
+      :landmark="selectedLandmark"
+      @close="selectedLandmark = null"
+    />
+    <LoadingOverlay
+      :is-loading="isLoading"
+      :loaded="tilesLoaded"
+      :total="tilesTotal"
+    />
   </div>
 </template>
 
+<script setup>
+import { ref, onUnmounted } from 'vue'
+import MarsCanvas from '@/components/gis/MarsCanvas.vue'
+import LandmarkTooltip from '@/components/gis/LandmarkTooltip.vue'
+import LandmarkInfoCard from '@/components/gis/LandmarkInfoCard.vue'
+import LoadingOverlay from '@/components/gis/LoadingOverlay.vue'
+
+const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+const isLoading = ref(true)
+const tilesLoaded = ref(0)
+const tilesTotal = ref(0)
+const hoveredLandmark = ref(null)
+const selectedLandmark = ref(null)
+const tooltipX = ref(0)
+const tooltipY = ref(0)
+
+function onReady() {
+  isLoading.value = false
+}
+
+function onHover(event) {
+  if (event) {
+    hoveredLandmark.value = event.landmark
+    tooltipX.value = event.screenX
+    tooltipY.value = event.screenY
+  } else {
+    hoveredLandmark.value = null
+  }
+}
+
+function onSelect(landmark) {
+  selectedLandmark.value = landmark
+}
+
+function onProgress(loaded, total) {
+  tilesLoaded.value = loaded
+  tilesTotal.value = total
+}
+
+function onKeyDown(e) {
+  if (e.key === 'Escape') selectedLandmark.value = null
+}
+
+window.addEventListener('keydown', onKeyDown)
+onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
+</script>
+
 <style scoped>
-.gis-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: calc(100vh - var(--nav-height));
-  gap: 0.75rem;
-}
-
-.gis-placeholder h1 {
-  font-size: 1.5rem;
-  color: var(--text);
-}
-
-.gis-placeholder p {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  margin: 0;
-}
+.gis-view { width: 100%; height: calc(100vh - var(--nav-height)); }
 </style>
