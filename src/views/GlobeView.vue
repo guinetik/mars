@@ -88,6 +88,11 @@ onMounted(async () => {
   controls.minDistance = 0.5
   controls.maxDistance = 20
 
+  // Reset orbit target to origin when user starts interacting
+  controls.addEventListener('start', () => {
+    controls.target.set(0, 0, 0)
+  })
+
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
   scene.add(ambientLight)
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.0)
