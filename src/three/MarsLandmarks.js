@@ -2,10 +2,9 @@
 import * as THREE from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { latLonToCartesian, surfaceNormal } from '@/lib/areography/coordinates.js'
-import { GLOBE_RADIUS, FLY_TO_DISTANCE } from './constants'
+import { GLOBE_RADIUS, FLY_TO_DISTANCE } from './constants.js'
 
-const PIN_RADIUS = 0.15
-const PIN_HEIGHT = 0.15
+const DEFAULT_PIN_SCALE = 0.015 // pin size relative to globe radius
 const PICK_THROTTLE_FRAMES = 3
 
 export class MarsLandmarks {
@@ -24,17 +23,23 @@ export class MarsLandmarks {
   onHover = null
   onClick = null
 
-  constructor(landmarks) {
+  /**
+   * @param {Array} landmarks - landmark data
+   * @param {number} [radius] - globe radius (defaults to GLOBE_RADIUS from constants)
+   */
+  constructor(landmarks, radius) {
     this.landmarks = landmarks
+    this.radius = radius ?? GLOBE_RADIUS
     this.root = new THREE.Group()
   }
 
   async init() {
-    this.pinGeometry = new THREE.SphereGeometry(PIN_RADIUS, 8, 8)
+    const pinRadius = this.radius * DEFAULT_PIN_SCALE
+    this.pinGeometry = new THREE.SphereGeometry(pinRadius, 8, 8)
     const pinGeometry = this.pinGeometry
 
     for (const landmark of this.landmarks) {
-      const position = latLonToCartesian(landmark.lat, landmark.lon, GLOBE_RADIUS * 1.005)
+      const position = latLonToCartesian(landmark.lat, landmark.lon, this.radius * 1.005)
       const color = new THREE.Color(landmark.accent)
 
       // Pin mesh
@@ -60,7 +65,7 @@ export class MarsLandmarks {
 
       const label = new CSS2DObject(labelDiv)
       const normal = surfaceNormal(landmark.lat, landmark.lon)
-      label.position.copy(position).addScaledVector(normal, PIN_HEIGHT)
+      label.position.copy(position).addScaledVector(normal, pinRadius)
       this.root.add(label)
 
       this.labelObjects.push(label)
@@ -71,8 +76,8 @@ export class MarsLandmarks {
   getLandmarkTarget(id) {
     const landmark = this.landmarks.find(l => l.id === id)
     if (!landmark) return null
-    const position = latLonToCartesian(landmark.lat, landmark.lon, GLOBE_RADIUS)
-    return { position, distance: FLY_TO_DISTANCE }
+    const position = latLonToCartesian(landmark.lat, landmark.lon, this.radius)
+    return { position, distance: this.radius * 0.6 }
   }
 
   pick(pointer, camera) {

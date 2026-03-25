@@ -3,16 +3,43 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 import { colorSchemes, createElevationMaterial } from '@/lib/colorSchemes.js'
+import { MarsLandmarks } from '@/three/MarsLandmarks.js'
+import { useMarsData } from '@/composables/useMarsData.js'
+import LandmarkTooltip from '@/components/gis/LandmarkTooltip.vue'
+import LandmarkInfoCard from '@/components/gis/LandmarkInfoCard.vue'
 
 const container = ref(null)
+const css2dRef = ref(null)
 const loadingText = ref('Loading Mars globe...')
 const isLoading = ref(true)
 const activeScheme = ref('elevation')
 
-let renderer, scene, camera, controls, animationId
-let resizeHandler
+// Landmark state
+const hoveredLandmark = ref(null)
+const selectedLandmark = ref(null)
+const tooltipX = ref(0)
+const tooltipY = ref(0)
+const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+const { loadLandmarks } = useMarsData()
+
+let renderer, css2dRenderer, scene, camera, controls, animationId
+let resizeHandler, keyHandler
 let elevationMaterial = null
+let landmarks = null
+const pointer = new THREE.Vector2(-999, -999)
+
+// Fly-to state
+let flyToActive = false
+let flyToStart = 0
+let flyToStartPos = new THREE.Vector3()
+let flyToEndPos = new THREE.Vector3()
+let flyToStartTarget = new THREE.Vector3()
+let flyToEndTarget = new THREE.Vector3()
+let clock = null
+const FLY_DURATION = 1.5
 
 function onSchemeChange(schemeId) {
   activeScheme.value = schemeId
@@ -22,13 +49,26 @@ function onSchemeChange(schemeId) {
   }
 }
 
-onMounted(() => {
+function flyTo(targetPosition, distance) {
+  if (!camera || !controls || !clock) return
+  flyToActive = true
+  flyToStart = clock.getElapsedTime()
+  flyToStartPos.copy(camera.position)
+  flyToStartTarget.copy(controls.target)
+  flyToEndTarget.copy(targetPosition)
+  const direction = targetPosition.clone().normalize()
+  flyToEndPos.copy(targetPosition).addScaledVector(direction, distance)
+  controls.enabled = false
+}
+
+onMounted(async () => {
   const el = container.value
   const width = el.clientWidth
   const height = el.clientHeight
 
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0x0a0a0a)
+  clock = new THREE.Clock()
 
   camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000)
   camera.position.set(0, 0, 3)
@@ -38,6 +78,10 @@ onMounted(() => {
   renderer.setPixelRatio(window.devicePixelRatio)
   el.appendChild(renderer.domElement)
 
+  // CSS2D renderer for landmark labels
+  css2dRenderer = new CSS2DRenderer({ element: css2dRef.value })
+  css2dRenderer.setSize(width, height)
+
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = 0.05
@@ -46,51 +90,70 @@ onMounted(() => {
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
   scene.add(ambientLight)
-
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.0)
   dirLight.position.set(5, 3, 5)
   scene.add(dirLight)
-
   const fillLight = new THREE.DirectionalLight(0xffffff, 0.4)
   fillLight.position.set(-3, -1, -3)
   scene.add(fillLight)
 
-  // Create elevation material with default scheme
   const defaultScheme = colorSchemes.find(s => s.id === activeScheme.value)
   elevationMaterial = createElevationMaterial(defaultScheme)
+
+  // Load landmarks data while GLB loads
+  const landmarkData = await loadLandmarks()
 
   const loader = new GLTFLoader()
   loader.load(
     '/mars_globe.glb',
-    (gltf) => {
+    async (gltf) => {
       const model = gltf.scene
       const box = new THREE.Box3().setFromObject(model)
       const center = box.getCenter(new THREE.Vector3())
       model.position.sub(center)
       const size = box.getSize(new THREE.Vector3())
       const maxDim = Math.max(size.x, size.y, size.z)
-      if (maxDim > 0) {
-        model.scale.setScalar(2 / maxDim)
-      }
+      const scaleFactor = maxDim > 0 ? 2 / maxDim : 1
+      model.scale.setScalar(scaleFactor)
 
-      // Compute elevation range from vertex radii
+      // Compute elevation range and find effective globe radius
       let minR = Infinity, maxR = -Infinity
       model.traverse((child) => {
         if (child.isMesh) {
           const pos = child.geometry.attributes.position
           for (let i = 0; i < pos.count; i++) {
-            const r = Math.sqrt(
-              pos.getX(i) ** 2 + pos.getY(i) ** 2 + pos.getZ(i) ** 2
-            )
+            const r = Math.sqrt(pos.getX(i) ** 2 + pos.getY(i) ** 2 + pos.getZ(i) ** 2)
             if (r < minR) minR = r
             if (r > maxR) maxR = r
           }
           child.material = elevationMaterial
         }
       })
-
       elevationMaterial.setElevationRange(minR, maxR)
+
+      // The mean radius after scaling is roughly 1.0 (unit sphere scaled to fit)
+      const meanRadius = (minR + maxR) / 2 * scaleFactor
       scene.add(model)
+
+      // Add landmarks at the scaled globe radius
+      landmarks = new MarsLandmarks(landmarkData, meanRadius)
+      landmarks.onHover = (event) => {
+        if (event) {
+          hoveredLandmark.value = event.landmark
+          tooltipX.value = event.screenX
+          tooltipY.value = event.screenY
+        } else {
+          hoveredLandmark.value = null
+        }
+      }
+      landmarks.onClick = (landmark) => {
+        selectedLandmark.value = landmark
+        const target = landmarks.getLandmarkTarget(landmark.id)
+        if (target) flyTo(target.position, target.distance)
+      }
+      await landmarks.init()
+      scene.add(landmarks.root)
+
       isLoading.value = false
     },
     (progress) => {
@@ -105,19 +168,58 @@ onMounted(() => {
     }
   )
 
+  // Pointer tracking
+  el.addEventListener('pointermove', (e) => {
+    pointer.x = (e.offsetX / el.clientWidth) * 2 - 1
+    pointer.y = -(e.offsetY / el.clientHeight) * 2 + 1
+  })
+  el.addEventListener('click', () => {
+    if (landmarks && camera) {
+      landmarks.clickTest(pointer, camera)
+    }
+  })
+
   resizeHandler = () => {
     const w = el.clientWidth
     const h = el.clientHeight
     camera.aspect = w / h
     camera.updateProjectionMatrix()
     renderer.setSize(w, h)
+    css2dRenderer.setSize(w, h)
   }
   window.addEventListener('resize', resizeHandler)
 
+  keyHandler = (e) => {
+    if (e.key === 'Escape') selectedLandmark.value = null
+  }
+  window.addEventListener('keydown', keyHandler)
+
   function animate() {
     animationId = requestAnimationFrame(animate)
+    const elapsed = clock.getElapsedTime()
+
+    // Fly-to animation
+    if (flyToActive) {
+      const t = Math.min(1, (elapsed - flyToStart) / FLY_DURATION)
+      const eased = t * t * (3 - 2 * t)
+      camera.position.lerpVectors(flyToStartPos, flyToEndPos, eased)
+      controls.target.lerpVectors(flyToStartTarget, flyToEndTarget, eased)
+      if (t >= 1) {
+        flyToActive = false
+        controls.enabled = true
+      }
+    }
+
     controls.update()
+
+    // Update landmarks
+    if (landmarks && camera) {
+      landmarks.pick(pointer, camera)
+      landmarks.updateVisibility(camera)
+    }
+
     renderer.render(scene, camera)
+    css2dRenderer.render(scene, camera)
   }
   animate()
 })
@@ -125,8 +227,10 @@ onMounted(() => {
 onUnmounted(() => {
   cancelAnimationFrame(animationId)
   window.removeEventListener('resize', resizeHandler)
+  window.removeEventListener('keydown', keyHandler)
   controls?.dispose()
   renderer?.dispose()
+  landmarks?.dispose()
   if (elevationMaterial) {
     if (elevationMaterial._rampTexture) elevationMaterial._rampTexture.dispose()
     elevationMaterial.dispose()
@@ -143,6 +247,7 @@ onUnmounted(() => {
 
 <template>
   <div ref="container" class="globe-container">
+    <div ref="css2dRef" class="css2d-overlay" />
     <div v-if="isLoading" class="loading">{{ loadingText }}</div>
     <div v-if="!isLoading" class="controls-panel">
       <label class="control-label">Color</label>
@@ -154,6 +259,16 @@ onUnmounted(() => {
         <option v-for="s in colorSchemes" :key="s.id" :value="s.id">{{ s.name }}</option>
       </select>
     </div>
+    <LandmarkTooltip
+      v-if="!isMobile"
+      :landmark="hoveredLandmark"
+      :x="tooltipX"
+      :y="tooltipY"
+    />
+    <LandmarkInfoCard
+      :landmark="selectedLandmark"
+      @close="selectedLandmark = null"
+    />
   </div>
 </template>
 
@@ -162,6 +277,13 @@ onUnmounted(() => {
   width: 100%;
   height: calc(100vh - var(--nav-height));
   position: relative;
+  overflow: hidden;
+}
+
+.css2d-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   overflow: hidden;
 }
 
