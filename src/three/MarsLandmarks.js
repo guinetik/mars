@@ -4,7 +4,9 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { latLonToCartesian, surfaceNormal } from '@/lib/areography/coordinates.js'
 import { GLOBE_RADIUS, FLY_TO_DISTANCE } from './constants.js'
 
-const DEFAULT_PIN_SCALE = 0.015 // pin size relative to globe radius
+const PIN_SCALE = 0.012        // pin head size relative to globe radius
+const SPIKE_SCALE = 0.04       // spike height relative to globe radius
+const RING_SCALE = 0.02        // glow ring radius relative to globe radius
 const PICK_THROTTLE_FRAMES = 3
 
 export class MarsLandmarks {
@@ -34,43 +36,92 @@ export class MarsLandmarks {
   }
 
   async init() {
-    const pinRadius = this.radius * DEFAULT_PIN_SCALE
-    this.pinGeometry = new THREE.SphereGeometry(pinRadius, 8, 8)
-    const pinGeometry = this.pinGeometry
+    const headRadius = this.radius * PIN_SCALE
+    const spikeHeight = this.radius * SPIKE_SCALE
+    const ringRadius = this.radius * RING_SCALE
+
+    // Shared geometries
+    this.pinGeometry = new THREE.SphereGeometry(headRadius, 12, 12)
+    const spikeGeo = new THREE.ConeGeometry(headRadius * 0.4, spikeHeight, 8)
+    spikeGeo.translate(0, spikeHeight / 2, 0)
+    const ringGeo = new THREE.RingGeometry(ringRadius * 0.6, ringRadius, 24)
 
     for (const landmark of this.landmarks) {
-      const position = latLonToCartesian(landmark.lat, landmark.lon, this.radius * 1.005)
+      const normal = surfaceNormal(landmark.lat, landmark.lon)
+      const surfacePos = latLonToCartesian(landmark.lat, landmark.lon, this.radius * 1.002)
       const color = new THREE.Color(landmark.accent)
 
-      // Pin mesh
-      const material = new THREE.MeshBasicMaterial({ color })
-      const pin = new THREE.Mesh(pinGeometry, material)
-      pin.position.copy(position)
-      this.root.add(pin)
-      this.pinMeshes.push(pin)
-      this.landmarkMap.set(pin, landmark)
+      // Pin group — spike + head, oriented along surface normal
+      const pinGroup = new THREE.Group()
 
-      // CSS2D label
+      // Spike (tapered cone from surface upward)
+      const spikeMat = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.5,
+      })
+      const spike = new THREE.Mesh(spikeGeo, spikeMat)
+      pinGroup.add(spike)
+
+      // Head (glassy sphere at top of spike)
+      const headMat = new THREE.MeshPhongMaterial({
+        color,
+        transparent: true,
+        opacity: 0.7,
+        shininess: 80,
+        emissive: color,
+        emissiveIntensity: 0.3,
+      })
+      const head = new THREE.Mesh(this.pinGeometry, headMat)
+      head.position.y = spikeHeight + headRadius * 0.5
+      pinGroup.add(head)
+
+      // Base ring (subtle glow on surface)
+      const ringMat = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      })
+      const ring = new THREE.Mesh(ringGeo, ringMat)
+      ring.position.y = -0.001 // slightly below spike base
+      pinGroup.add(ring)
+
+      // Orient pin group to point along surface normal
+      pinGroup.position.copy(surfacePos)
+      const up = new THREE.Vector3(0, 1, 0)
+      const quat = new THREE.Quaternion().setFromUnitVectors(up, normal)
+      pinGroup.quaternion.copy(quat)
+
+      this.root.add(pinGroup)
+      this.pinMeshes.push(head) // raycasting targets the head
+      this.landmarkMap.set(head, landmark)
+
+      // CSS2D label — positioned above the head
       const labelDiv = document.createElement('div')
       labelDiv.className = 'landmark-label'
       labelDiv.textContent = landmark.name
       labelDiv.style.color = landmark.accent
-      labelDiv.style.fontFamily = '"IBM Plex Sans", system-ui, sans-serif'
-      labelDiv.style.fontSize = '13px'
+      labelDiv.style.fontFamily = 'Inter, system-ui, sans-serif'
+      labelDiv.style.fontSize = '11px'
       labelDiv.style.fontWeight = '500'
-      labelDiv.style.letterSpacing = '0.05em'
-      labelDiv.style.textShadow = '0 1px 4px rgba(0,0,0,0.8)'
+      labelDiv.style.letterSpacing = '0.06em'
+      labelDiv.style.textShadow = '0 1px 6px rgba(0,0,0,0.9)'
       labelDiv.style.pointerEvents = 'none'
       labelDiv.style.whiteSpace = 'nowrap'
 
       const label = new CSS2DObject(labelDiv)
-      const normal = surfaceNormal(landmark.lat, landmark.lon)
-      label.position.copy(position).addScaledVector(normal, pinRadius)
+      const labelOffset = spikeHeight + headRadius * 2
+      label.position.copy(surfacePos).addScaledVector(normal, labelOffset)
       this.root.add(label)
 
       this.labelObjects.push(label)
       this.normals.push(normal)
     }
+
+    spikeGeo.dispose()
+    ringGeo.dispose()
   }
 
   getLandmarkTarget(id) {
@@ -142,8 +193,10 @@ export class MarsLandmarks {
 
   dispose() {
     this.pinGeometry?.dispose()
-    for (const mesh of this.pinMeshes) {
-      mesh.material.dispose()
-    }
+    this.root.traverse((obj) => {
+      if (obj.isMesh) {
+        obj.material?.dispose()
+      }
+    })
   }
 }
