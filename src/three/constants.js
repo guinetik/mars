@@ -35,3 +35,31 @@ export const LANDMARK_COLORS = {
   plain: '#ffca28',
   'polar-cap': '#e0e0e0',
 }
+
+// Terrain Explorer
+export const TERRAIN_SCALE = 1000
+export const TERRAIN_PLAYER_HEIGHT = 2
+export const TERRAIN_WALK_SPEED = 15
+export const TERRAIN_SPRINT_MULTIPLIER = 3
+export const TERRAIN_MAX_SLOPE_DEG = 60
+export const TERRAIN_FOG_COLOR = 0x33150a
+export const TERRAIN_SKY_COLOR = 0x1a0a04
+export const TERRAIN_SUN_COLOR = 0xffd4a0
+export const TERRAIN_AMBIENT_COLOR = 0x442200
+export const TERRAIN_Y_LERP = 0.1
+
+export const EXPLORABLE_LANDMARKS = [
+  'acidalia-planitia',
+  'argyre-basin',
+  'arsia-mons',
+  'ascraeus-mons',
+  'elysium-mons',
+  'hellas-basin',
+  'north-polar-region',
+  'olympus-mons',
+  'pavonis-mons',
+  'south-polar-region',
+  'syrtis-major',
+  'utopia-planitia',
+  'valles-marineris',
+]

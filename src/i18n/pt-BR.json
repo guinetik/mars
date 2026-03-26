@@ -41,7 +41,16 @@
     "basalt": "Basalto",
     "roughness": "Rugosidade",
     "dustCover": "Cobertura de Poeira",
-    "cratering": "Craterização"
+    "cratering": "Craterização",
+    "exploreTerrain": "Explorar Terreno"
+  },
+  "explore": {
+    "title": "Explorar Terreno",
+    "back": "Voltar ao Globo",
+    "controls": "Clique para explorar | WASD para mover | SHIFT para correr | ESC para sair",
+    "loading": "Carregando terreno...",
+    "notFound": "Terreno não disponível para este marco.",
+    "desktopOnly": "A exploração de terreno requer um navegador de desktop."
   },
   "about": {
     "title": "Sobre Este Projeto",

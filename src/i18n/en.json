@@ -41,7 +41,16 @@
     "basalt": "Basalt",
     "roughness": "Roughness",
     "dustCover": "Dust Cover",
-    "cratering": "Cratering"
+    "cratering": "Cratering",
+    "exploreTerrain": "Explore Terrain"
+  },
+  "explore": {
+    "title": "Explore Terrain",
+    "back": "Back to Globe",
+    "controls": "Click to explore | WASD to move | SHIFT to sprint | ESC to exit",
+    "loading": "Loading terrain...",
+    "notFound": "Terrain not available for this landmark.",
+    "desktopOnly": "Terrain exploration requires a desktop browser."
   },
   "about": {
     "title": "About This Project",
