@@ -16,6 +16,7 @@
     <LandmarkInfoCard
       :landmark="selectedLandmark"
       @close="selectedLandmark = null"
+      @explore="(lm) => router.push(`/explore/${lm.id}`)"
     />
     <LoadingOverlay
       :is-loading="isLoading"
@@ -28,6 +29,7 @@
 
 <script setup>
 import { ref, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import MarsCanvas from '@/components/gis/MarsCanvas.vue'
 import LandmarkTooltip from '@/components/gis/LandmarkTooltip.vue'
 import LandmarkInfoCard from '@/components/gis/LandmarkInfoCard.vue'
@@ -35,6 +37,7 @@ import LoadingOverlay from '@/components/gis/LoadingOverlay.vue'
 import LandmarkLegend from '@/components/gis/LandmarkLegend.vue'
 
 const marsCanvasRef = ref(null)
+const router = useRouter()
 const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
 const isLoading = ref(true)

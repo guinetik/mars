@@ -89,16 +89,25 @@
           <span class="detail-value">{{ landmark.lat.toFixed(2) }}°, {{ landmark.lon.toFixed(2) }}°</span>
         </div>
       </div>
+      <button
+        v-if="landmark?.type === 'geological' && EXPLORABLE_LANDMARKS.includes(landmark.id)"
+        class="explore-btn"
+        @click="$emit('explore', landmark)"
+      >
+        {{ $t('infoCard.exploreTerrain') }}
+      </button>
     </div>
   </Transition>
 </template>
 
 <script setup>
+import { EXPLORABLE_LANDMARKS } from '@/three/constants.js'
+
 defineProps({
   landmark: { type: Object, default: null }
 })
 
-defineEmits(['close'])
+defineEmits(['close', 'explore'])
 </script>
 
 <style scoped>
@@ -209,6 +218,27 @@ defineEmits(['close'])
   height: 100%;
   border-radius: 2px;
   transition: width 0.4s ease-out;
+}
+
+.explore-btn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 0;
+  background: #ffca28;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.explore-btn:hover {
+  background: #ffd54f;
 }
 
 .card-enter-active { transition: all 0.3s ease-out; }

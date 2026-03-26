@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { colorSchemes, createElevationMaterial } from '@/lib/colorSchemes.js'
@@ -33,6 +34,7 @@ const selectedLandmark = ref(null)
 const tooltipX = ref(0)
 const tooltipY = ref(0)
 const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+const router = useRouter()
 
 // --- Scene infrastructure (shared composable, configured for unit-sphere GLB) ---
 
@@ -284,6 +286,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
     <LandmarkInfoCard
       :landmark="selectedLandmark"
       @close="selectedLandmark = null"
+      @explore="(lm) => router.push(`/explore/${lm.id}`)"
     />
     <LandmarkLegend v-if="!isLoading" @filter="onFilter" />
   </div>
