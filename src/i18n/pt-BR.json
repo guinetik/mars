@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "brand": "MARTE",
+    "elevationGlobe": "Globo de Elevação",
+    "marsGis": "SIG de Marte",
+    "about": "Sobre"
+  },
+  "loading": {
+    "surface": "Carregando superfície de Marte..."
+  },
+  "globe": {
+    "colorLabel": "Cor"
+  },
+  "legend": {
+    "landingSite": "Locais de Pouso",
+    "volcano": "Vulcões",
+    "canyon": "Cânions",
+    "basin": "Bacias",
+    "plain": "Planícies",
+    "polarCap": "Calotas Polares"
+  },
+  "infoCard": {
+    "mission": "Missão",
+    "agency": "Agência",
+    "year": "Ano",
+    "status": "Status",
+    "feature": "Feição",
+    "diameter": "Diâmetro",
+    "elevation": "Elevação",
+    "pressure": "Pressão",
+    "tempRange": "Faixa de Temp.",
+    "age": "Idade",
+    "coordinates": "Coordenadas",
+    "waterIce": "Gelo de Água",
+    "ironOxide": "Óxido de Ferro",
+    "silicate": "Silicato",
+    "basalt": "Basalto",
+    "roughness": "Rugosidade",
+    "dustCover": "Cobertura de Poeira",
+    "cratering": "Craterização"
+  },
+  "about": {
+    "title": "Sobre Este Projeto",
+    "lead": "Uma reconstrução 3D de alta resolução da topografia global de Marte, construída a partir de dados de elevação orbital coletados por duas espaçonaves ao longo de duas décadas de observação.",
+    "figcaption": "DEM Combinado HRSC-MOLA — 106.694 × 53.347 pixels, 200m/px. Clique para ampliar.",
+    "dataSource": {
+      "title": "Fonte de Dados",
+      "p1": "Este globo é derivado do {strong_dem}, um conjunto de dados produzido pelo Centro de Ciência Astrogeológica do Serviço Geológico dos EUA. Ele combina medições de elevação de dois instrumentos:",
+      "strong_dem": "Modelo Digital de Elevação Combinado HRSC-MOLA",
+      "mola": "{strong_mola} (Altímetro Laser do Orbitador de Marte) a bordo do Mars Global Surveyor da NASA, que operou de 1997 a 2006. O MOLA disparava pulsos laser na superfície e media o tempo de retorno para determinar a elevação com precisão vertical de ~1 metro.",
+      "strong_mola": "MOLA",
+      "hrsc": "{strong_hrsc} (Câmera Estéreo de Alta Resolução) a bordo do Mars Express da ESA, operacional desde 2004. A HRSC captura imagens estéreo que são processadas em modelos de elevação fotogramétricos, fornecendo detalhes onde o espaçamento ao longo da trilha do MOLA deixa lacunas.",
+      "strong_hrsc": "HRSC",
+      "p2": "O produto combinado une a cobertura global do MOLA com o detalhe regional da HRSC, produzindo um mapa de elevação unificado a {strong_res} — aproximadamente 106.694 × 53.347 pixels cobrindo todo o planeta.",
+      "strong_res": "200 metros por pixel"
+    },
+    "pipeline": {
+      "title": "Pipeline de Processamento",
+      "intro": "O conjunto de dados bruto é um arquivo GeoTIFF de 11 GB contendo valores de elevação de 16 bits com sinal em metros relativos ao aeroide de Marte (uma superfície de referência análoga ao nível do mar da Terra). Nosso pipeline processa isso em uma malha 3D através das seguintes etapas:",
+      "step1_title": "Subamostragem",
+      "step1": "A grade em resolução total é reamostrada para uma resolução alvo usando interpolação bilinear via {code_rasterio} (construído sobre GDAL). O alvo padrão é 4 km/pixel, gerando aproximadamente 5.300 × 2.700 pontos de dados.",
+      "step2_title": "Projeção esférica",
+      "step2": "A latitude e longitude de cada célula da grade são convertidas em coordenadas cartesianas 3D em uma esfera unitária. Os valores de elevação deslocam cada vértice radialmente para fora, com um fator de exagero configurável (padrão 10×) para tornar as feições do terreno visíveis na escala do globo.",
+      "step3_title": "Geração de malha",
+      "step3": "A grade é triangulada em uma malha esférica estanque. As linhas polares são colapsadas em vértices únicos com leques de triângulos para evitar geometria degenerada nos polos.",
+      "step4_title": "Cálculo de normais",
+      "step4": "As normais por vértice são calculadas pela média das normais das faces adjacentes, permitindo sombreamento suave que revela feições sutis do terreno.",
+      "step5_title": "Exportação",
+      "step5": "A malha final é exportada como um arquivo glTF binário (GLB) para carregamento eficiente no navegador."
+    },
+    "elevation": {
+      "title": "Perfil de Elevação",
+      "p1": "Marte possui a faixa topográfica mais extrema de qualquer planeta terrestre do sistema solar. As elevações neste conjunto de dados variam de {strong_min} (o piso de Hellas Planitia, a bacia de impacto mais profunda) a {strong_max} (o cume de Olympus Mons, o maior vulcão conhecido). Esta faixa de ~29 km excede a faixa de ~20 km da Terra, da Fossa das Marianas ao Monte Everest.",
+      "strong_min": "-8.200 m",
+      "strong_max": "+21.229 m",
+      "p2": "A topografia do planeta se divide aproximadamente em dois hemisférios: as terras altas do sul, fortemente craterizadas, que ficam 1-3 km acima do datum, e as terras baixas do norte, mais suaves, que ficam 1-3 km abaixo. Esta dicotomia, ainda não totalmente explicada, é uma das grandes questões em aberto da ciência planetária."
+    },
+    "references": {
+      "title": "Referências",
+      "ref1": "Fergason, R. L., Hare, T. M., & Laura, J. (2018). {em}. Astrogeology PDS Annex, U.S. Geological Survey.",
+      "ref1_em": "HRSC and MOLA Blended Digital Elevation Model at 200m v2",
+      "ref2": "Smith, D. E., et al. (2001). {em}. Journal of Geophysical Research, 106(E10), 23689-23722.",
+      "ref2_em": "Mars Orbiter Laser Altimeter: Experiment summary after the first year of global mapping of Mars",
+      "ref3": "Gwinner, K., et al. (2016). {em}. European Planetary Science Congress.",
+      "ref3_em": "The first global image mosaic and digital elevation model of Mars from the High Resolution Stereo Camera"
+    }
+  }
+}

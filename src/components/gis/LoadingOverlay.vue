@@ -2,7 +2,7 @@
   <Transition name="fade">
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-content">
-        <p class="loading-text">Loading Mars surface...</p>
+        <p class="loading-text">{{ $t('loading.surface') }}</p>
         <p v-if="total > 0" class="loading-progress">{{ loaded }} / {{ total }}</p>
       </div>
     </div>
@@ -41,4 +41,15 @@ defineProps({
 }
 .fade-leave-active { transition: opacity 0.6s ease; }
 .fade-leave-to { opacity: 0; }
+
+@media (max-width: 430px) {
+  .loading-text {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+  }
+
+  .loading-progress {
+    font-size: 0.65rem;
+  }
+}
 </style>

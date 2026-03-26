@@ -5,12 +5,12 @@ import { LANDMARK_COLORS } from '@/three/constants.js'
 const emit = defineEmits(['filter'])
 
 const TYPES = [
-  { key: 'landing-site', label: 'Landing Sites' },
-  { key: 'volcano', label: 'Volcanoes' },
-  { key: 'canyon', label: 'Canyons' },
-  { key: 'basin', label: 'Basins' },
-  { key: 'plain', label: 'Plains' },
-  { key: 'polar-cap', label: 'Polar Caps' },
+  { key: 'landing-site', labelKey: 'legend.landingSite' },
+  { key: 'volcano', labelKey: 'legend.volcano' },
+  { key: 'canyon', labelKey: 'legend.canyon' },
+  { key: 'basin', labelKey: 'legend.basin' },
+  { key: 'plain', labelKey: 'legend.plain' },
+  { key: 'polar-cap', labelKey: 'legend.polarCap' },
 ]
 
 // All visible by default
@@ -40,7 +40,7 @@ function toggle(key) {
       @click="toggle(t.key)"
     >
       <span class="legend-dot" :style="{ backgroundColor: LANDMARK_COLORS[t.key] }" />
-      <span class="legend-label">{{ t.label }}</span>
+      <span class="legend-label">{{ $t(t.labelKey) }}</span>
     </button>
   </div>
 </template>
@@ -97,5 +97,41 @@ function toggle(key) {
 
 .legend-item:not(.dimmed) .legend-label {
   color: var(--text);
+}
+
+@media (max-width: 430px) {
+  .legend {
+    bottom: 0.5rem;
+    left: 0.5rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .legend-label {
+    font-size: 0.6rem;
+  }
+
+  .legend-dot {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+@media (max-width: 300px) {
+  .legend {
+    flex-direction: row;
+    flex-wrap: wrap;
+    bottom: 0.25rem;
+    left: 0.25rem;
+    right: 0.25rem;
+  }
+
+  .legend-item {
+    gap: 0.3rem;
+    padding: 0.15rem 0.2rem;
+  }
+
+  .legend-label {
+    font-size: 0.55rem;
+  }
 }
 </style>

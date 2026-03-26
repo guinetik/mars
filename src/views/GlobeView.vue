@@ -187,7 +187,7 @@ function loadGLB(url) {
     <LoadingOverlay :is-loading="isLoading" :loaded="0" :total="0" />
 
     <div v-if="!isLoading" class="controls-panel">
-      <label class="control-label">Color</label>
+      <label class="control-label">{{ $t('globe.colorLabel') }}</label>
       <select
         :value="activeScheme"
         @change="onSchemeChange($event.target.value)"
@@ -274,5 +274,22 @@ canvas {
 .scheme-select:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+@media (max-width: 430px) {
+  .controls-panel {
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .control-label {
+    font-size: 0.6rem;
+  }
+
+  .scheme-select {
+    font-size: 0.7rem;
+    padding: 0.25rem 1.2rem 0.25rem 0.4rem;
+  }
 }
 </style>

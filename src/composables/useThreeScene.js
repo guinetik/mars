@@ -62,6 +62,10 @@ export function useThreeScene(opts = {}) {
   // Pointer
   const pointer = new THREE.Vector2(-999, -999)
 
+  // Pinch zoom
+  let pinchStartDist = 0
+  let pinchStartZoom = 0
+
   // Click handler
   let onClickCallback = null
 
@@ -99,6 +103,9 @@ export function useThreeScene(opts = {}) {
     canvas.addEventListener('pointermove', onPointerMove)
     canvas.addEventListener('click', onPointerClick)
     canvas.addEventListener('wheel', onWheel, { passive: false })
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false })
+    canvas.addEventListener('touchend', onTouchEnd)
     window.addEventListener('resize', onResize)
   }
 
@@ -131,6 +138,38 @@ export function useThreeScene(opts = {}) {
     isIdle = false
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => { isIdle = true }, config.autoRotateDelay)
+  }
+
+  function getTouchDistance(e) {
+    const t0 = e.touches[0]
+    const t1 = e.touches[1]
+    return Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY)
+  }
+
+  function onTouchStart(e) {
+    if (e.touches.length === 2) {
+      e.preventDefault()
+      pinchStartDist = getTouchDistance(e)
+      pinchStartZoom = targetDistance
+    }
+  }
+
+  function onTouchMove(e) {
+    if (e.touches.length === 2) {
+      e.preventDefault()
+      const dist = getTouchDistance(e)
+      const scale = pinchStartDist / dist
+      targetDistance = Math.max(config.minDistance, Math.min(config.maxDistance, pinchStartZoom * scale))
+      isIdle = false
+      if (idleTimer) clearTimeout(idleTimer)
+    }
+  }
+
+  function onTouchEnd(e) {
+    if (e.touches.length < 2) {
+      if (idleTimer) clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => { isIdle = true }, config.autoRotateDelay)
+    }
   }
 
   function onPointerClick() {
@@ -246,6 +285,9 @@ export function useThreeScene(opts = {}) {
     renderer?.domElement.removeEventListener('pointermove', onPointerMove)
     renderer?.domElement.removeEventListener('click', onPointerClick)
     renderer?.domElement.removeEventListener('wheel', onWheel)
+    renderer?.domElement.removeEventListener('touchstart', onTouchStart)
+    renderer?.domElement.removeEventListener('touchmove', onTouchMove)
+    renderer?.domElement.removeEventListener('touchend', onTouchEnd)
     window.removeEventListener('resize', onResize)
     renderer?.dispose()
     if (idleTimer) clearTimeout(idleTimer)

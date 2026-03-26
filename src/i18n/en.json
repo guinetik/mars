@@ -1,0 +1,88 @@
+{
+  "nav": {
+    "brand": "MARS",
+    "elevationGlobe": "Elevation Globe",
+    "marsGis": "Mars GIS",
+    "about": "About"
+  },
+  "loading": {
+    "surface": "Loading Mars surface..."
+  },
+  "globe": {
+    "colorLabel": "Color"
+  },
+  "legend": {
+    "landingSite": "Landing Sites",
+    "volcano": "Volcanoes",
+    "canyon": "Canyons",
+    "basin": "Basins",
+    "plain": "Plains",
+    "polarCap": "Polar Caps"
+  },
+  "infoCard": {
+    "mission": "Mission",
+    "agency": "Agency",
+    "year": "Year",
+    "status": "Status",
+    "feature": "Feature",
+    "diameter": "Diameter",
+    "elevation": "Elevation",
+    "pressure": "Pressure",
+    "tempRange": "Temp Range",
+    "age": "Age",
+    "coordinates": "Coordinates",
+    "waterIce": "Water Ice",
+    "ironOxide": "Iron Oxide",
+    "silicate": "Silicate",
+    "basalt": "Basalt",
+    "roughness": "Roughness",
+    "dustCover": "Dust Cover",
+    "cratering": "Cratering"
+  },
+  "about": {
+    "title": "About This Project",
+    "lead": "A high-resolution 3D reconstruction of Mars' global topography, built from orbital elevation data collected by two spacecraft over two decades of observation.",
+    "figcaption": "HRSC-MOLA Blended DEM — 106,694 × 53,347 pixels, 200m/px. Click to enlarge.",
+    "dataSource": {
+      "title": "Data Source",
+      "p1": "This globe is derived from the {strong_dem}, a dataset produced by the U.S. Geological Survey's Astrogeology Science Center. It merges elevation measurements from two instruments:",
+      "strong_dem": "HRSC-MOLA Blended Digital Elevation Model",
+      "mola": "{strong_mola} (Mars Orbiter Laser Altimeter) aboard NASA's Mars Global Surveyor, which operated from 1997 to 2006. MOLA fired laser pulses at the surface and measured return time to determine elevation with ~1 meter vertical precision.",
+      "strong_mola": "MOLA",
+      "hrsc": "{strong_hrsc} (High Resolution Stereo Camera) aboard ESA's Mars Express, operational since 2004. HRSC captures stereo imagery that is processed into photogrammetric elevation models, providing detail where MOLA's along-track spacing leaves gaps.",
+      "strong_hrsc": "HRSC",
+      "p2": "The blended product combines MOLA's global coverage with HRSC's regional detail, producing a unified elevation map at {strong_res} — approximately 106,694 × 53,347 pixels covering the entire planet.",
+      "strong_res": "200 meters per pixel"
+    },
+    "pipeline": {
+      "title": "Processing Pipeline",
+      "intro": "The raw dataset is an 11 GB GeoTIFF file containing signed 16-bit elevation values in meters relative to the Mars aeroid (a reference surface analogous to Earth's sea level). Our pipeline processes this into a 3D mesh through the following steps:",
+      "step1_title": "Downsampling",
+      "step1": "The full-resolution grid is resampled to a target resolution using bilinear interpolation via {code_rasterio} (built on GDAL). The default target is 4 km/pixel, yielding approximately 5,300 × 2,700 data points.",
+      "step2_title": "Spherical projection",
+      "step2": "Each grid cell's latitude and longitude are converted to 3D Cartesian coordinates on a unit sphere. Elevation values displace each vertex radially outward, with a configurable exaggeration factor (default 10×) to make terrain features visible at globe scale.",
+      "step3_title": "Mesh generation",
+      "step3": "The grid is triangulated into a watertight sphere mesh. Polar rows are collapsed into single vertices with triangle fans to avoid degenerate geometry at the poles.",
+      "step4_title": "Normal computation",
+      "step4": "Per-vertex normals are computed by averaging adjacent face normals, enabling smooth shading that reveals subtle terrain features.",
+      "step5_title": "Export",
+      "step5": "The final mesh is exported as a binary glTF (GLB) file for efficient loading in the browser."
+    },
+    "elevation": {
+      "title": "Elevation Profile",
+      "p1": "Mars has the most extreme topographic range of any terrestrial planet in the solar system. Elevations in this dataset span from {strong_min} (the floor of Hellas Planitia, the deepest impact basin) to {strong_max} (the summit of Olympus Mons, the tallest known volcano). This ~29 km range exceeds Earth's ~20 km range from the Mariana Trench to Mount Everest.",
+      "strong_min": "-8,200 m",
+      "strong_max": "+21,229 m",
+      "p2": "The planet's topography divides roughly into two hemispheres: the heavily cratered southern highlands, which sit 1-3 km above the datum, and the smoother northern lowlands, which are 1-3 km below. This dichotomy, still not fully explained, is one of the major open questions in planetary science."
+    },
+    "references": {
+      "title": "References",
+      "ref1": "Fergason, R. L., Hare, T. M., & Laura, J. (2018). {em}. Astrogeology PDS Annex, U.S. Geological Survey.",
+      "ref1_em": "HRSC and MOLA Blended Digital Elevation Model at 200m v2",
+      "ref2": "Smith, D. E., et al. (2001). {em}. Journal of Geophysical Research, 106(E10), 23689-23722.",
+      "ref2_em": "Mars Orbiter Laser Altimeter: Experiment summary after the first year of global mapping of Mars",
+      "ref3": "Gwinner, K., et al. (2016). {em}. European Planetary Science Congress.",
+      "ref3_em": "The first global image mosaic and digital elevation model of Mars from the High Resolution Stereo Camera"
+    }
+  }
+}

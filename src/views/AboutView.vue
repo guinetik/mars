@@ -1,26 +1,23 @@
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const lightboxOpen = ref(false)
 </script>
 
 <template>
   <div class="about">
     <article class="content">
-      <h1>About This Project</h1>
-      <p class="lead">
-        A high-resolution 3D reconstruction of Mars' global topography, built from
-        orbital elevation data collected by two spacecraft over two decades of observation.
-      </p>
+      <h1>{{ t('about.title') }}</h1>
+      <p class="lead">{{ t('about.lead') }}</p>
 
       <figure class="cover" @click="lightboxOpen = true">
         <picture>
           <source srcset="/images/mola-preview.webp" type="image/webp" />
           <img src="/images/mola-preview.png" alt="Mars HRSC-MOLA Blended DEM — global elevation map with hypsometric color ramp" loading="lazy" />
         </picture>
-        <figcaption>
-          HRSC-MOLA Blended DEM &mdash; 106,694 &times; 53,347 pixels, 200m/px. Click to enlarge.
-        </figcaption>
+        <figcaption>{{ t('about.figcaption') }}</figcaption>
       </figure>
 
       <Transition name="lightbox">
@@ -31,101 +28,76 @@ const lightboxOpen = ref(false)
       </Transition>
 
       <section>
-        <h2>Data Source</h2>
+        <h2>{{ t('about.dataSource.title') }}</h2>
         <p>
-          This globe is derived from the <strong>HRSC-MOLA Blended Digital Elevation Model</strong>,
-          a dataset produced by the U.S. Geological Survey's Astrogeology Science Center. It merges
-          elevation measurements from two instruments:
+          <i18n-t keypath="about.dataSource.p1" tag="span">
+            <template #strong_dem><strong>{{ t('about.dataSource.strong_dem') }}</strong></template>
+          </i18n-t>
         </p>
         <ul>
           <li>
-            <strong>MOLA</strong> (Mars Orbiter Laser Altimeter) aboard NASA's Mars Global Surveyor,
-            which operated from 1997 to 2006. MOLA fired laser pulses at the surface and measured
-            return time to determine elevation with ~1 meter vertical precision.
+            <i18n-t keypath="about.dataSource.mola" tag="span">
+              <template #strong_mola><strong>{{ t('about.dataSource.strong_mola') }}</strong></template>
+            </i18n-t>
           </li>
           <li>
-            <strong>HRSC</strong> (High Resolution Stereo Camera) aboard ESA's Mars Express,
-            operational since 2004. HRSC captures stereo imagery that is processed into
-            photogrammetric elevation models, providing detail where MOLA's along-track spacing
-            leaves gaps.
+            <i18n-t keypath="about.dataSource.hrsc" tag="span">
+              <template #strong_hrsc><strong>{{ t('about.dataSource.strong_hrsc') }}</strong></template>
+            </i18n-t>
           </li>
         </ul>
         <p>
-          The blended product combines MOLA's global coverage with HRSC's regional detail,
-          producing a unified elevation map at <strong>200 meters per pixel</strong> — approximately
-          106,694 &times; 53,347 pixels covering the entire planet.
+          <i18n-t keypath="about.dataSource.p2" tag="span">
+            <template #strong_res><strong>{{ t('about.dataSource.strong_res') }}</strong></template>
+          </i18n-t>
         </p>
       </section>
 
       <section>
-        <h2>Processing Pipeline</h2>
-        <p>
-          The raw dataset is an 11 GB GeoTIFF file containing signed 16-bit elevation values in meters
-          relative to the Mars aeroid (a reference surface analogous to Earth's sea level). Our pipeline
-          processes this into a 3D mesh through the following steps:
-        </p>
+        <h2>{{ t('about.pipeline.title') }}</h2>
+        <p>{{ t('about.pipeline.intro') }}</p>
         <ol>
           <li>
-            <strong>Downsampling</strong> — The full-resolution grid is resampled to a target resolution
-            using bilinear interpolation via <code>rasterio</code> (built on GDAL). The default target
-            is 4 km/pixel, yielding approximately 5,300 &times; 2,700 data points.
+            <strong>{{ t('about.pipeline.step1_title') }}</strong> &mdash;
+            <i18n-t keypath="about.pipeline.step1" tag="span">
+              <template #code_rasterio><code>rasterio</code></template>
+            </i18n-t>
           </li>
-          <li>
-            <strong>Spherical projection</strong> — Each grid cell's latitude and longitude are converted
-            to 3D Cartesian coordinates on a unit sphere. Elevation values displace each vertex radially
-            outward, with a configurable exaggeration factor (default 10&times;) to make terrain features
-            visible at globe scale.
-          </li>
-          <li>
-            <strong>Mesh generation</strong> — The grid is triangulated into a watertight sphere mesh.
-            Polar rows are collapsed into single vertices with triangle fans to avoid degenerate geometry
-            at the poles.
-          </li>
-          <li>
-            <strong>Normal computation</strong> — Per-vertex normals are computed by averaging adjacent
-            face normals, enabling smooth shading that reveals subtle terrain features.
-          </li>
-          <li>
-            <strong>Export</strong> — The final mesh is exported as a binary glTF (GLB) file for
-            efficient loading in the browser.
-          </li>
+          <li><strong>{{ t('about.pipeline.step2_title') }}</strong> &mdash; {{ t('about.pipeline.step2') }}</li>
+          <li><strong>{{ t('about.pipeline.step3_title') }}</strong> &mdash; {{ t('about.pipeline.step3') }}</li>
+          <li><strong>{{ t('about.pipeline.step4_title') }}</strong> &mdash; {{ t('about.pipeline.step4') }}</li>
+          <li><strong>{{ t('about.pipeline.step5_title') }}</strong> &mdash; {{ t('about.pipeline.step5') }}</li>
         </ol>
       </section>
 
       <section>
-        <h2>Elevation Profile</h2>
+        <h2>{{ t('about.elevation.title') }}</h2>
         <p>
-          Mars has the most extreme topographic range of any terrestrial planet in the solar system.
-          Elevations in this dataset span from <strong>-8,200 m</strong> (the floor of Hellas Planitia,
-          the deepest impact basin) to <strong>+21,229 m</strong> (the summit of Olympus Mons, the
-          tallest known volcano). This ~29 km range exceeds Earth's ~20 km range from the Mariana Trench
-          to Mount Everest.
+          <i18n-t keypath="about.elevation.p1" tag="span">
+            <template #strong_min><strong>{{ t('about.elevation.strong_min') }}</strong></template>
+            <template #strong_max><strong>{{ t('about.elevation.strong_max') }}</strong></template>
+          </i18n-t>
         </p>
-        <p>
-          The planet's topography divides roughly into two hemispheres: the heavily cratered southern
-          highlands, which sit 1-3 km above the datum, and the smoother northern lowlands, which are
-          1-3 km below. This dichotomy, still not fully explained, is one of the major open questions
-          in planetary science.
-        </p>
+        <p>{{ t('about.elevation.p2') }}</p>
       </section>
 
       <section>
-        <h2>References</h2>
+        <h2>{{ t('about.references.title') }}</h2>
         <ul class="references">
           <li>
-            Fergason, R. L., Hare, T. M., &amp; Laura, J. (2018).
-            <em>HRSC and MOLA Blended Digital Elevation Model at 200m v2.</em>
-            Astrogeology PDS Annex, U.S. Geological Survey.
+            <i18n-t keypath="about.references.ref1" tag="span">
+              <template #em><em>{{ t('about.references.ref1_em') }}</em></template>
+            </i18n-t>
           </li>
           <li>
-            Smith, D. E., et al. (2001).
-            <em>Mars Orbiter Laser Altimeter: Experiment summary after the first year of global
-            mapping of Mars.</em> Journal of Geophysical Research, 106(E10), 23689-23722.
+            <i18n-t keypath="about.references.ref2" tag="span">
+              <template #em><em>{{ t('about.references.ref2_em') }}</em></template>
+            </i18n-t>
           </li>
           <li>
-            Gwinner, K., et al. (2016).
-            <em>The first global image mosaic and digital elevation model of Mars from the
-            High Resolution Stereo Camera.</em> European Planetary Science Congress.
+            <i18n-t keypath="about.references.ref3" tag="span">
+              <template #em><em>{{ t('about.references.ref3_em') }}</em></template>
+            </i18n-t>
           </li>
         </ul>
       </section>
@@ -260,4 +232,72 @@ code {
 .lightbox-enter-active { transition: opacity 0.2s ease; }
 .lightbox-leave-active { transition: opacity 0.15s ease; }
 .lightbox-enter-from, .lightbox-leave-to { opacity: 0; }
+
+@media (max-width: 430px) {
+  .about {
+    padding: 2rem 1rem 3rem;
+  }
+
+  .content h1 {
+    font-size: 1.5rem;
+  }
+
+  .lead {
+    font-size: 0.95rem;
+  }
+
+  section h2 {
+    font-size: 1.15rem;
+  }
+
+  .cover {
+    margin: 0 -0.5rem 2rem;
+  }
+
+  .cover figcaption {
+    font-size: 0.65rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .lightbox {
+    padding: 1rem;
+  }
+
+  .references li {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 300px) {
+  .about {
+    padding: 1.5rem 0.75rem 2rem;
+  }
+
+  .content h1 {
+    font-size: 1.25rem;
+  }
+
+  .lead {
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  section h2 {
+    font-size: 1rem;
+  }
+
+  li {
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .cover {
+    margin: 0 0 1.5rem;
+    border-radius: 4px;
+  }
+
+  .lightbox {
+    padding: 0.5rem;
+  }
+}
 </style>
