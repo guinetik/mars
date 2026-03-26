@@ -14,6 +14,7 @@ export function useFpsControls(camera, canvas) {
   let isLocked = false
   let terrainMesh = null
   let lastGroundY = TERRAIN_PLAYER_HEIGHT
+  let flyOffset = 0
 
   const raycaster = new THREE.Raycaster()
   const moveDirection = new THREE.Vector3()
@@ -101,12 +102,19 @@ export function useFpsControls(camera, canvas) {
     if (keys['KeyD']) moveDirection.add(right)
     if (keys['KeyA']) moveDirection.sub(right)
 
+    // Jetpack — Space to rise, no limit
+    const isFlying = keys['Space']
+    if (isFlying) {
+      flyOffset += speed * delta
+    }
+
     if (moveDirection.lengthSq() > 0) {
       moveDirection.normalize()
       const nextX = camera.position.x + moveDirection.x * speed * delta
       const nextZ = camera.position.z + moveDirection.z * speed * delta
 
-      if (canMoveTo(nextX, nextZ)) {
+      // Skip slope collision when flying
+      if (isFlying || canMoveTo(nextX, nextZ)) {
         camera.position.x = nextX
         camera.position.z = nextZ
       }
@@ -116,8 +124,16 @@ export function useFpsControls(camera, canvas) {
     const groundY = getGroundHeight(camera.position.x, camera.position.z)
     if (groundY !== null) {
       lastGroundY = groundY
-      const targetY = groundY + TERRAIN_PLAYER_HEIGHT
-      camera.position.y += (targetY - camera.position.y) * TERRAIN_Y_LERP
+      const targetY = groundY + TERRAIN_PLAYER_HEIGHT + flyOffset
+      if (isFlying) {
+        // Snap up immediately when jetpacking
+        camera.position.y = Math.max(camera.position.y, targetY)
+      } else {
+        // Descend smoothly when not holding space
+        flyOffset = Math.max(0, flyOffset - speed * delta * 0.5)
+        const landY = groundY + TERRAIN_PLAYER_HEIGHT + flyOffset
+        camera.position.y += (landY - camera.position.y) * TERRAIN_Y_LERP
+      }
     }
   }
 
