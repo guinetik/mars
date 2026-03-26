@@ -161,23 +161,30 @@ export function createTerrainElevationMaterial(scheme) {
   const ramp = buildRampTexture(scheme)
 
   const material = new THREE.ShaderMaterial({
-    uniforms: {
-      uRamp: { value: ramp },
-      uMinY: { value: 0.0 },
-      uMaxY: { value: 1.0 },
-      uLightDir: { value: new THREE.Vector3(5, 3, 5).normalize() },
-      uFillDir: { value: new THREE.Vector3(-3, -1, -3).normalize() },
-    },
+    uniforms: THREE.UniformsUtils.merge([
+      THREE.UniformsLib.fog,
+      {
+        uRamp: { value: ramp },
+        uMinY: { value: 0.0 },
+        uMaxY: { value: 1.0 },
+        uLightDir: { value: new THREE.Vector3(5, 3, 5).normalize() },
+        uFillDir: { value: new THREE.Vector3(-3, -1, -3).normalize() },
+      },
+    ]),
     vertexShader: /* glsl */`
+      #include <fog_pars_vertex>
       varying float vElevation;
       varying vec3 vNormal;
       void main() {
         vElevation = position.y;
         vNormal = normalize(normalMatrix * normal);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
       }
     `,
     fragmentShader: /* glsl */`
+      #include <fog_pars_fragment>
       uniform sampler2D uRamp;
       uniform float uMinY;
       uniform float uMaxY;
@@ -196,6 +203,7 @@ export function createTerrainElevationMaterial(scheme) {
         float lighting = ambient + diffuse * 0.55 + fill;
 
         gl_FragColor = vec4(baseColor * lighting, 1.0);
+        #include <fog_fragment>
       }
     `,
     fog: true,
