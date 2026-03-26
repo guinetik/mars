@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { useFpsControls } from '@/composables/useFpsControls.js'
 import { useMarsData } from '@/composables/useMarsData.js'
+import { colorSchemes, createTerrainElevationMaterial } from '@/lib/colorSchemes.js'
 import {
   TERRAIN_SCALE,
   TERRAIN_FOG_COLOR,
@@ -106,17 +107,26 @@ onMounted(async () => {
     const terrainGroup = gltf.scene
     terrainGroup.scale.set(TERRAIN_SCALE, TERRAIN_SCALE, TERRAIN_SCALE)
 
-    // Apply Mars material to all meshes
-    const marsMaterial = new THREE.MeshStandardMaterial({
-      color: 0xb5724a,
-      roughness: 0.9,
-      metalness: 0.1,
-      flatShading: false,
+    // Find elevation range from mesh geometry
+    let minY = Infinity
+    let maxY = -Infinity
+    terrainGroup.traverse((child) => {
+      if (child.isMesh) {
+        child.geometry.computeBoundingBox()
+        const box = child.geometry.boundingBox
+        if (box.min.y < minY) minY = box.min.y
+        if (box.max.y > maxY) maxY = box.max.y
+      }
     })
+
+    // Apply elevation color scheme (same as globe)
+    const elevationScheme = colorSchemes.find(s => s.id === 'elevation')
+    const terrainMaterial = createTerrainElevationMaterial(elevationScheme)
+    terrainMaterial.setElevationRange(minY, maxY)
 
     terrainGroup.traverse((child) => {
       if (child.isMesh) {
-        child.material = marsMaterial
+        child.material = terrainMaterial
       }
     })
 
@@ -145,14 +155,14 @@ onMounted(async () => {
       { dir: new THREE.Vector3(1, 0, 0), label: 'E' },
       { dir: new THREE.Vector3(-1, 0, 0), label: 'W' },
     ]
-    let maxY = -Infinity
+    let highestY = -Infinity
     let lookDir = new THREE.Vector3(0, 0, -1)
     for (const s of samples) {
       const samplePos = s.dir.clone().multiplyScalar(TERRAIN_SCALE * 0.4)
       raycaster.set(new THREE.Vector3(samplePos.x, 9999, samplePos.z), new THREE.Vector3(0, -1, 0))
       const sHits = raycaster.intersectObject(terrainGroup, true)
-      if (sHits.length > 0 && sHits[0].point.y > maxY) {
-        maxY = sHits[0].point.y
+      if (sHits.length > 0 && sHits[0].point.y > highestY) {
+        highestY = sHits[0].point.y
         lookDir = s.dir.clone()
       }
     }

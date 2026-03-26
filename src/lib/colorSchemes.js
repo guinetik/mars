@@ -152,3 +152,68 @@ export function createElevationMaterial(scheme) {
 
   return material
 }
+
+/**
+ * Create a ShaderMaterial for flat terrain tiles that colors by Y position.
+ * Same color ramp system as the globe, but reads position.y instead of radial distance.
+ */
+export function createTerrainElevationMaterial(scheme) {
+  const ramp = buildRampTexture(scheme)
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uRamp: { value: ramp },
+      uMinY: { value: 0.0 },
+      uMaxY: { value: 1.0 },
+      uLightDir: { value: new THREE.Vector3(5, 3, 5).normalize() },
+      uFillDir: { value: new THREE.Vector3(-3, -1, -3).normalize() },
+    },
+    vertexShader: /* glsl */`
+      varying float vElevation;
+      varying vec3 vNormal;
+      void main() {
+        vElevation = position.y;
+        vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform sampler2D uRamp;
+      uniform float uMinY;
+      uniform float uMaxY;
+      uniform vec3 uLightDir;
+      uniform vec3 uFillDir;
+      varying float vElevation;
+      varying vec3 vNormal;
+      void main() {
+        float t = clamp((vElevation - uMinY) / (uMaxY - uMinY), 0.0, 1.0);
+        vec3 baseColor = texture2D(uRamp, vec2(t, 0.5)).rgb;
+
+        vec3 n = normalize(vNormal);
+        float diffuse = max(dot(n, uLightDir), 0.0);
+        float fill = max(dot(n, uFillDir), 0.0) * 0.35;
+        float ambient = 0.25;
+        float lighting = ambient + diffuse * 0.55 + fill;
+
+        gl_FragColor = vec4(baseColor * lighting, 1.0);
+      }
+    `,
+    fog: true,
+  })
+
+  material._rampTexture = ramp
+
+  material.updateScheme = (newScheme) => {
+    if (material._rampTexture) material._rampTexture.dispose()
+    const newRamp = buildRampTexture(newScheme)
+    material.uniforms.uRamp.value = newRamp
+    material._rampTexture = newRamp
+  }
+
+  material.setElevationRange = (minY, maxY) => {
+    material.uniforms.uMinY.value = minY
+    material.uniforms.uMaxY.value = maxY
+  }
+
+  return material
+}
