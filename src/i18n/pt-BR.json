@@ -9,7 +9,11 @@
     "surface": "Carregando superfície de Marte..."
   },
   "globe": {
-    "colorLabel": "Cor"
+    "colorLabel": "Cor",
+    "qualityLabel": "Qualidade",
+    "qualityStandard": "Padrão",
+    "qualityHigh": "Alta (650 MB)",
+    "loadingHd": "Carregando modelo HD..."
   },
   "legend": {
     "landingSite": "Locais de Pouso",

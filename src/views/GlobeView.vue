@@ -12,12 +12,22 @@ import LandmarkInfoCard from '@/components/gis/LandmarkInfoCard.vue'
 import LoadingOverlay from '@/components/gis/LoadingOverlay.vue'
 import LandmarkLegend from '@/components/gis/LandmarkLegend.vue'
 
+// --- Constants ---
+
+const R2_BASE = 'https://pub-3ae55587a05a4c0bb0a9fde6b0847d45.r2.dev'
+const QUALITY_OPTIONS = [
+  { id: 'standard', url: `${R2_BASE}/mars_globe.glb` },
+  { id: 'high', url: `${R2_BASE}/mars_globe_4km.glb` },
+]
+
 // --- State ---
 
 const canvasRef = ref(null)
 const css2dRef = ref(null)
 const isLoading = ref(true)
+const isLoadingHd = ref(false)
 const activeScheme = ref('elevation')
+const activeQuality = ref('standard')
 const hoveredLandmark = ref(null)
 const selectedLandmark = ref(null)
 const tooltipX = ref(0)
@@ -44,6 +54,7 @@ let scene = null
 let elevationMaterial = null
 let landmarks = null
 let stars = null
+let currentModel = null
 
 function onFilter(hiddenTypes) {
   if (landmarks) landmarks.setFilter(hiddenTypes)
@@ -53,6 +64,89 @@ function onSchemeChange(schemeId) {
   activeScheme.value = schemeId
   const scheme = colorSchemes.find(s => s.id === schemeId)
   if (scheme && elevationMaterial) elevationMaterial.updateScheme(scheme)
+}
+
+// --- Globe loading ---
+
+let lastGlobeRadius = 1
+const globeCache = new Map() // url → prepared model + metadata
+
+function prepareModel(gltf) {
+  const model = gltf.scene
+
+  // Center and scale to unit
+  const box = new THREE.Box3().setFromObject(model)
+  const center = box.getCenter(new THREE.Vector3())
+  model.position.sub(center)
+  const maxDim = Math.max(...box.getSize(new THREE.Vector3()).toArray())
+  const scaleFactor = maxDim > 0 ? 2 / maxDim : 1
+  model.scale.setScalar(scaleFactor)
+
+  // Compute elevation range
+  let minR = Infinity, maxR = -Infinity
+  model.traverse((child) => {
+    if (child.isMesh) {
+      const pos = child.geometry.attributes.position
+      for (let i = 0; i < pos.count; i++) {
+        const r = Math.sqrt(pos.getX(i) ** 2 + pos.getY(i) ** 2 + pos.getZ(i) ** 2)
+        if (r < minR) minR = r
+        if (r > maxR) maxR = r
+      }
+    }
+  })
+
+  const radius = (minR + maxR) / 2 * scaleFactor
+  return { model, minR, maxR, radius }
+}
+
+function swapModel(entry) {
+  // Remove previous model from scene (don't dispose — it's cached)
+  if (currentModel) scene.remove(currentModel)
+
+  // Apply current material
+  entry.model.traverse((child) => {
+    if (child.isMesh) child.material = elevationMaterial
+  })
+  elevationMaterial.setElevationRange(entry.minR, entry.maxR)
+
+  lastGlobeRadius = entry.radius
+  currentModel = entry.model
+  scene.add(entry.model)
+}
+
+function loadGlobe(url) {
+  // Return cached immediately
+  if (globeCache.has(url)) {
+    swapModel(globeCache.get(url))
+    return Promise.resolve()
+  }
+
+  return new Promise((resolve, reject) => {
+    new GLTFLoader().load(url, (gltf) => {
+      const entry = prepareModel(gltf)
+      globeCache.set(url, entry)
+      swapModel(entry)
+      resolve()
+    }, undefined, reject)
+  })
+}
+
+async function onQualityChange(qualityId) {
+  if (qualityId === activeQuality.value) return
+  const opt = QUALITY_OPTIONS.find(q => q.id === qualityId)
+  if (!opt) return
+
+  activeQuality.value = qualityId
+  isLoadingHd.value = true
+
+  try {
+    await loadGlobe(opt.url)
+  } catch (e) {
+    console.error('Failed to load globe:', e)
+    activeQuality.value = activeQuality.value === 'standard' ? 'high' : 'standard'
+  }
+
+  isLoadingHd.value = false
 }
 
 // --- Lifecycle ---
@@ -81,37 +175,11 @@ onMounted(async () => {
   // Load landmarks while GLB loads
   const landmarkData = await loadLandmarks()
 
-  // Load GLB globe
-  const gltf = await loadGLB('/mars_globe.glb')
-  const model = gltf.scene
-
-  // Center and scale to unit
-  const box = new THREE.Box3().setFromObject(model)
-  const center = box.getCenter(new THREE.Vector3())
-  model.position.sub(center)
-  const maxDim = Math.max(...box.getSize(new THREE.Vector3()).toArray())
-  const scaleFactor = maxDim > 0 ? 2 / maxDim : 1
-  model.scale.setScalar(scaleFactor)
-
-  // Compute elevation range and apply material
-  let minR = Infinity, maxR = -Infinity
-  model.traverse((child) => {
-    if (child.isMesh) {
-      const pos = child.geometry.attributes.position
-      for (let i = 0; i < pos.count; i++) {
-        const r = Math.sqrt(pos.getX(i) ** 2 + pos.getY(i) ** 2 + pos.getZ(i) ** 2)
-        if (r < minR) minR = r
-        if (r > maxR) maxR = r
-      }
-      child.material = elevationMaterial
-    }
-  })
-  elevationMaterial.setElevationRange(minR, maxR)
-  scene.add(model)
+  // Load initial globe from R2
+  await loadGlobe(QUALITY_OPTIONS[0].url)
 
   // Landmarks
-  const globeRadius = (minR + maxR) / 2 * scaleFactor
-  landmarks = new MarsLandmarks(landmarkData, globeRadius)
+  landmarks = new MarsLandmarks(landmarkData, lastGlobeRadius)
   landmarks.onHover = (event) => {
     if (event) {
       hoveredLandmark.value = event.landmark
@@ -131,8 +199,8 @@ onMounted(async () => {
 
   setClickHandler((ptr, cam) => landmarks.clickTest(ptr, cam))
 
-  // Stars — use fewer, further away for the smaller globe
-  stars = new BackgroundStars(globeRadius * 40, { count: 6000, pointSize: 0.6 })
+  // Stars
+  stars = new BackgroundStars(lastGlobeRadius * 40, { count: 6000, pointSize: 0.6 })
   scene.add(stars.root)
 
   // Start render loop
@@ -170,13 +238,6 @@ function onKeyDown(e) {
 window.addEventListener('keydown', onKeyDown)
 onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
 
-// --- Helpers ---
-
-function loadGLB(url) {
-  return new Promise((resolve, reject) => {
-    new GLTFLoader().load(url, resolve, undefined, reject)
-  })
-}
 </script>
 
 <template>
@@ -185,6 +246,23 @@ function loadGLB(url) {
     <div ref="css2dRef" class="css2d-overlay" />
 
     <LoadingOverlay :is-loading="isLoading" :loaded="0" :total="0" />
+
+    <div v-if="!isLoading" class="controls-panel controls-left">
+      <label class="control-label">{{ $t('globe.qualityLabel') }}</label>
+      <select
+        :value="activeQuality"
+        :disabled="isLoadingHd"
+        @change="onQualityChange($event.target.value)"
+        class="scheme-select"
+      >
+        <option value="standard">{{ $t('globe.qualityStandard') }}</option>
+        <option value="high">{{ $t('globe.qualityHigh') }}</option>
+      </select>
+    </div>
+
+    <Transition name="hd-toast">
+      <div v-if="isLoadingHd" class="hd-loading">{{ $t('globe.loadingHd') }}</div>
+    </Transition>
 
     <div v-if="!isLoading" class="controls-panel">
       <label class="control-label">{{ $t('globe.colorLabel') }}</label>
@@ -276,6 +354,38 @@ canvas {
   border-color: var(--accent);
 }
 
+.scheme-select:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.controls-left {
+  right: auto;
+  left: 1rem;
+}
+
+.hd-loading {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.4rem 1rem;
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.hd-toast-enter-active { transition: opacity 0.2s, transform 0.2s; }
+.hd-toast-leave-active { transition: opacity 0.15s, transform 0.15s; }
+.hd-toast-enter-from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+.hd-toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+
 @media (max-width: 430px) {
   .controls-panel {
     top: 0.5rem;
@@ -290,6 +400,14 @@ canvas {
   .scheme-select {
     font-size: 0.7rem;
     padding: 0.25rem 1.2rem 0.25rem 0.4rem;
+  }
+
+  .controls-left {
+    left: 0.5rem;
+  }
+
+  .hd-loading {
+    font-size: 0.65rem;
   }
 }
 </style>

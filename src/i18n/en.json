@@ -9,7 +9,11 @@
     "surface": "Loading Mars surface..."
   },
   "globe": {
-    "colorLabel": "Color"
+    "colorLabel": "Color",
+    "qualityLabel": "Quality",
+    "qualityStandard": "Standard",
+    "qualityHigh": "High (650 MB)",
+    "loadingHd": "Loading HD model..."
   },
   "legend": {
     "landingSite": "Landing Sites",
