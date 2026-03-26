@@ -182,6 +182,7 @@ onMounted(async () => {
     // Start render loop
     clock = new THREE.Clock()
     function animate() {
+      if (!renderer) return
       animationId = requestAnimationFrame(animate)
       const delta = clock.getDelta()
       fps.update(delta)
