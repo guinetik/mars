@@ -130,7 +130,7 @@ export function useFpsControls(camera, canvas) {
         camera.position.y = Math.max(camera.position.y, targetY)
       } else {
         // Descend smoothly when not holding space
-        flyOffset = Math.max(0, flyOffset - speed * delta * 0.5)
+        flyOffset = Math.max(0, flyOffset - speed * delta * 2.0)
         const landY = groundY + TERRAIN_PLAYER_HEIGHT + flyOffset
         camera.position.y += (landY - camera.position.y) * TERRAIN_Y_LERP
       }
