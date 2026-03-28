@@ -48,6 +48,7 @@
     "title": "Explorar Terreno",
     "back": "Voltar ao Globo",
     "controls": "Clique para explorar | WASD para mover | SHIFT para correr | ESC para sair",
+    "roverControls": "WASD para dirigir | SHIFT para turbo | Arraste para orbitar | Scroll para zoom",
     "loading": "Carregando terreno...",
     "notFound": "Terreno não disponível para este marco.",
     "desktopOnly": "A exploração de terreno requer um navegador de desktop."

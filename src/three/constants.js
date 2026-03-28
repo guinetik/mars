@@ -48,6 +48,26 @@ export const TERRAIN_SUN_COLOR = 0xffd4a0
 export const TERRAIN_AMBIENT_COLOR = 0x442200
 export const TERRAIN_Y_LERP = 0.1
 
+// Rover Explorer
+export const ROVER_SCALE = 0.5
+export const ROVER_MOVE_SPEED = 4
+export const ROVER_TURN_SPEED = 0.6
+export const ROVER_WHEEL_SPIN_SPEED = 8
+export const ROVER_STEER_ANGLE_MAX = 0.4
+export const ROVER_STEER_LERP = 0.15
+export const ROVER_CAMERA_DISTANCE_DEFAULT = 8
+export const ROVER_CAMERA_DISTANCE_MIN = 2.2
+export const ROVER_CAMERA_DISTANCE_MAX = 18
+export const ROVER_CAMERA_HEIGHT_OFFSET = 3
+export const ROVER_CAMERA_LOOK_HEIGHT_OFFSET = 1
+export const ROVER_CAMERA_LERP = 0.08
+export const ROVER_GROUND_LERP = 0.2
+export const ROVER_TILT_LERP = 0.1
+export const ROVER_ORBIT_SENSITIVITY = 0.005
+export const ROVER_ORBIT_PITCH_MIN = -0.3
+export const ROVER_ORBIT_PITCH_MAX = 1.3
+export const ROVER_WHEEL_ZOOM_FACTOR = 0.0032
+
 export const EXPLORABLE_LANDMARKS = [
   'acidalia-planitia',
   'argyre-basin',

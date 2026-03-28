@@ -160,6 +160,12 @@ export function createElevationMaterial(scheme) {
 export function createTerrainElevationMaterial(scheme) {
   const ramp = buildRampTexture(scheme)
 
+  // Load rock detail texture
+  const rockTex = new THREE.TextureLoader().load('/terrain-rock.jpg')
+  rockTex.wrapS = rockTex.wrapT = THREE.RepeatWrapping
+  rockTex.minFilter = THREE.LinearMipmapLinearFilter
+  rockTex.anisotropy = 4
+
   const material = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([
       THREE.UniformsLib.fog,
@@ -169,15 +175,18 @@ export function createTerrainElevationMaterial(scheme) {
         uMaxY: { value: 1.0 },
         uLightDir: { value: new THREE.Vector3(5, 3, 5).normalize() },
         uFillDir: { value: new THREE.Vector3(-3, -1, -3).normalize() },
+        uRockTexture: { value: rockTex },
       },
     ]),
     vertexShader: /* glsl */`
       #include <fog_pars_vertex>
       varying float vElevation;
       varying vec3 vNormal;
+      varying vec3 vWorldPos;
       void main() {
         vElevation = position.y;
         vNormal = normalize(normalMatrix * normal);
+        vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
         gl_Position = projectionMatrix * mvPosition;
         #include <fog_vertex>
@@ -186,15 +195,28 @@ export function createTerrainElevationMaterial(scheme) {
     fragmentShader: /* glsl */`
       #include <fog_pars_fragment>
       uniform sampler2D uRamp;
+      uniform sampler2D uRockTexture;
       uniform float uMinY;
       uniform float uMaxY;
       uniform vec3 uLightDir;
       uniform vec3 uFillDir;
       varying float vElevation;
       varying vec3 vNormal;
+      varying vec3 vWorldPos;
       void main() {
         float t = clamp((vElevation - uMinY) / (uMaxY - uMinY), 0.0, 1.0);
         vec3 baseColor = texture2D(uRamp, vec2(t, 0.5)).rgb;
+
+        // Rock detail texture at two scales to reduce tiling
+        vec2 texUv1 = vWorldPos.xz * 0.08;
+        vec2 texUv2 = vWorldPos.xz * 0.02;
+        vec3 rock1 = texture2D(uRockTexture, texUv1).rgb;
+        vec3 rock2 = texture2D(uRockTexture, texUv2 * 1.3 + 0.5).rgb;
+        float rockDetail = dot(mix(rock1, rock2, 0.4), vec3(0.33));
+
+        // Blend: rock texture modulates the elevation color
+        // 0.5 + rockDetail*0.5 keeps it in [0.5, 1.0] range — adds detail without going too dark
+        baseColor *= 0.55 + rockDetail * 0.55;
 
         vec3 n = normalize(vNormal);
         float diffuse = max(dot(n, uLightDir), 0.0);

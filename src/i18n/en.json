@@ -48,6 +48,7 @@
     "title": "Explore Terrain",
     "back": "Back to Globe",
     "controls": "Click to explore | WASD to move | SHIFT to sprint | ESC to exit",
+    "roverControls": "WASD to drive | SHIFT to boost | Drag to orbit camera | Scroll to zoom",
     "loading": "Loading terrain...",
     "notFound": "Terrain not available for this landmark.",
     "desktopOnly": "Terrain exploration requires a desktop browser."
