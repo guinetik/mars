@@ -42,7 +42,10 @@
     "roughness": "Rugosidade",
     "dustCover": "Cobertura de Poeira",
     "cratering": "Craterização",
-    "exploreTerrain": "Explorar Terreno"
+    "exploreTerrain": "Explorar Terreno",
+    "explore": "Explorar",
+    "byRover": "De Rover",
+    "onFoot": "A Pe"
   },
   "explore": {
     "title": "Explorar Terreno",

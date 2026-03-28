@@ -90,7 +90,16 @@ onMounted(async () => {
   sun.position.set(200, 400, 100)
   scene.add(sun)
 
-  const ambient = new THREE.AmbientLight(TERRAIN_AMBIENT_COLOR, 0.3)
+  // Fill light from opposite side
+  const fill = new THREE.DirectionalLight(0xffd0a0, 0.4)
+  fill.position.set(-100, 200, -50)
+  scene.add(fill)
+
+  // Sky/ground hemisphere for natural ambient gradient
+  const hemi = new THREE.HemisphereLight(0xffc890, 0x553320, 0.5)
+  scene.add(hemi)
+
+  const ambient = new THREE.AmbientLight(TERRAIN_AMBIENT_COLOR, 0.5)
   scene.add(ambient)
 
   // Load terrain GLB

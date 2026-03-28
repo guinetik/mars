@@ -42,7 +42,10 @@
     "roughness": "Roughness",
     "dustCover": "Dust Cover",
     "cratering": "Cratering",
-    "exploreTerrain": "Explore Terrain"
+    "exploreTerrain": "Explore Terrain",
+    "explore": "Explore",
+    "byRover": "By Rover",
+    "onFoot": "On Foot"
   },
   "explore": {
     "title": "Explore Terrain",

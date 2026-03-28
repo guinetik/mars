@@ -84,16 +84,19 @@ def load_tile(input_path, lat, lon, radius_km, target_resolution, grid_size=None
         lat_deg_per_m = 360.0 / MARS_CIRCUMFERENCE
         radius_lat_deg = radius_m * lat_deg_per_m
 
+        # For polar regions: offset center latitude away from the pole
+        # so we get a proper rectangular extraction instead of a degenerate strip
+        if abs(lat) + radius_lat_deg > 89.0:
+            offset_lat = np.sign(lat) * (89.0 - radius_lat_deg)
+            print(f"Polar adjustment: shifting center lat from {lat:.2f} to {offset_lat:.2f}")
+            lat = offset_lat
+
         # Longitude: adjust for latitude (shorter circumference near poles)
         cos_lat = np.cos(np.radians(lat))
         if cos_lat < 1e-6:
             print("ERROR: Cannot extract tile at exact poles", file=sys.stderr)
             sys.exit(1)
         radius_lon_deg = radius_lat_deg / cos_lat
-
-        # Clamp longitude extent to keep tile roughly square
-        # At high latitudes, lon degrees explode — cap to same physical extent
-        radius_lon_deg = min(radius_lon_deg, radius_lat_deg)
 
         # Bounding box in degrees
         lat_min = lat - radius_lat_deg
@@ -125,14 +128,19 @@ def load_tile(input_path, lat, lon, radius_km, target_resolution, grid_size=None
 
         # Determine output dimensions
         if grid_size:
-            # Fixed grid: fit within grid_size x grid_size, preserving aspect ratio
-            aspect = pixel_width / pixel_height
-            if aspect >= 1:
+            # Fixed grid: use physical aspect ratio, not pixel aspect
+            # (equirectangular projection distorts lon pixels at high latitudes)
+            actual_lon_deg = lon_max - lon_min
+            actual_lat_deg = lat_max - lat_min
+            phys_x = actual_lon_deg * (MARS_CIRCUMFERENCE / 360.0) * cos_lat
+            phys_y = actual_lat_deg * (MARS_CIRCUMFERENCE / 360.0)
+            phys_aspect = phys_x / phys_y if phys_y > 0 else 1.0
+            if phys_aspect >= 1:
                 out_width = grid_size
-                out_height = max(2, int(grid_size / aspect))
+                out_height = max(2, int(grid_size / phys_aspect))
             else:
                 out_height = grid_size
-                out_width = max(2, int(grid_size * aspect))
+                out_width = max(2, int(grid_size * phys_aspect))
             actual_mpp = (2 * radius_km * 1000.0) / max(out_width, out_height)
         elif target_resolution and target_resolution > src_mpp:
             scale = src_mpp / target_resolution

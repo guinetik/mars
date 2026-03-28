@@ -16,6 +16,7 @@ export class MarsLandmarks {
   normals = []
   landmarkMap = new Map()
   pinGroups = []          // { group, label, landmark } for filtering
+  beamMaterials = []      // per-landmark beam ShaderMaterial for fade
   pinGeometry = null
   frameCount = 0
   hoveredMesh = null
@@ -59,9 +60,10 @@ export class MarsLandmarks {
       `,
       fragmentShader: /* glsl */`
         uniform vec3 uColor;
+        uniform float uFade;
         varying float vAlpha;
         void main() {
-          gl_FragColor = vec4(uColor, vAlpha);
+          gl_FragColor = vec4(uColor, vAlpha * uFade);
         }
       `,
     }
@@ -75,7 +77,7 @@ export class MarsLandmarks {
 
       // Light beam — tapered, fades to transparent at top
       const beamMat = new THREE.ShaderMaterial({
-        uniforms: { uColor: { value: color } },
+        uniforms: { uColor: { value: color }, uFade: { value: 1.0 } },
         vertexShader: beamShader.vertexShader,
         fragmentShader: beamShader.fragmentShader,
         transparent: true,
@@ -85,6 +87,7 @@ export class MarsLandmarks {
       })
       const beam = new THREE.Mesh(beamGeo, beamMat)
       pinGroup.add(beam)
+      this.beamMaterials.push(beamMat)
 
       // Invisible hit target for raycasting
       const hitMat = new THREE.MeshBasicMaterial({ visible: false })
@@ -149,7 +152,10 @@ export class MarsLandmarks {
       const type = this.getLandmarkType(entry.landmark)
       const hidden = hiddenTypes.has(type)
       entry.group.visible = !hidden
-      if (entry.label) entry.label.visible = !hidden
+      if (entry.label) {
+        entry.label.visible = !hidden
+        entry.label.element.style.display = hidden ? 'none' : ''
+      }
     }
   }
 
@@ -220,6 +226,12 @@ export class MarsLandmarks {
    * between the landmark's world-space normal and the camera direction.
    */
   updateVisibility(camera) {
+    // Distance-based fade: fully visible up to fadeStart, fully gone at fadeEnd
+    const fadeStart = this.radius * 3.5
+    const fadeEnd = this.radius * 5.0
+    const camDist = camera.position.length()
+    const distFade = 1.0 - Math.max(0, Math.min(1, (camDist - fadeStart) / (fadeEnd - fadeStart)))
+
     for (let i = 0; i < this.pinMeshes.length; i++) {
       const pin = this.pinMeshes[i]
       const label = this.labelObjects[i]
@@ -238,10 +250,19 @@ export class MarsLandmarks {
       // Respect type filter
       const type = this.getLandmarkType(this.landmarks[i])
       const filtered = this.hiddenTypes.has(type)
-      const visible = facing && !filtered
+      const visible = facing && !filtered && distFade > 0.01
 
       pin.visible = visible
       label.visible = visible
+
+      // CSS2DRenderer ignores .visible — must hide the DOM element directly
+      if (visible) {
+        this.beamMaterials[i].uniforms.uFade.value = distFade
+        label.element.style.opacity = distFade
+        label.element.style.display = ''
+      } else {
+        label.element.style.display = 'none'
+      }
     }
   }
 

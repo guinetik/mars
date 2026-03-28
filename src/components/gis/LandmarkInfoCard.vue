@@ -89,13 +89,20 @@
           <span class="detail-value">{{ landmark.lat.toFixed(2) }}°, {{ landmark.lon.toFixed(2) }}°</span>
         </div>
       </div>
-      <button
-        v-if="landmark?.type === 'geological' && EXPLORABLE_LANDMARKS.includes(landmark.id)"
-        class="explore-btn"
-        @click="$emit('explore', landmark)"
+      <div
+        v-if="landmark && EXPLORABLE_LANDMARKS.includes(landmark.id)"
+        class="explore-section"
       >
-        {{ $t('infoCard.exploreTerrain') }}
-      </button>
+        <span class="explore-label">{{ $t('infoCard.explore') }}</span>
+        <div class="explore-buttons">
+          <button class="explore-btn explore-btn--rover" @click="$emit('explore-rover', landmark)">
+            {{ $t('infoCard.byRover') }}
+          </button>
+          <button class="explore-btn explore-btn--foot" @click="$emit('explore-foot', landmark)">
+            {{ $t('infoCard.onFoot') }}
+          </button>
+        </div>
+      </div>
     </div>
   </Transition>
 </template>
@@ -107,7 +114,7 @@ defineProps({
   landmark: { type: Object, default: null }
 })
 
-defineEmits(['close', 'explore'])
+defineEmits(['close', 'explore-rover', 'explore-foot'])
 </script>
 
 <style scoped>
@@ -220,16 +227,30 @@ defineEmits(['close', 'explore'])
   transition: width 0.4s ease-out;
 }
 
-.explore-btn {
-  display: block;
-  width: 100%;
+.explore-section {
   margin-top: 16px;
-  padding: 10px 0;
-  background: #ffca28;
-  color: #1a1a1a;
+}
+
+.explore-label {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+}
+
+.explore-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.explore-btn {
+  flex: 1;
+  padding: 9px 0;
   border: none;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -237,8 +258,23 @@ defineEmits(['close', 'explore'])
   transition: background 0.2s;
 }
 
-.explore-btn:hover {
+.explore-btn--rover {
+  background: #ffca28;
+  color: #1a1a1a;
+}
+
+.explore-btn--rover:hover {
   background: #ffd54f;
+}
+
+.explore-btn--foot {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.explore-btn--foot:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .card-enter-active { transition: all 0.3s ease-out; }

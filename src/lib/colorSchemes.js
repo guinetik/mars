@@ -215,14 +215,14 @@ export function createTerrainElevationMaterial(scheme) {
         float rockDetail = dot(mix(rock1, rock2, 0.4), vec3(0.33));
 
         // Blend: rock texture modulates the elevation color
-        // 0.5 + rockDetail*0.5 keeps it in [0.5, 1.0] range — adds detail without going too dark
-        baseColor *= 0.55 + rockDetail * 0.55;
+        // 0.6 + rockDetail*0.5 keeps it in [0.6, 1.1] range — adds detail without going too dark
+        baseColor *= 0.6 + rockDetail * 0.5;
 
         vec3 n = normalize(vNormal);
         float diffuse = max(dot(n, uLightDir), 0.0);
         float fill = max(dot(n, uFillDir), 0.0) * 0.35;
-        float ambient = 0.25;
-        float lighting = ambient + diffuse * 0.55 + fill;
+        float ambient = 0.35;
+        float lighting = ambient + diffuse * 0.50 + fill;
 
         gl_FragColor = vec4(baseColor * lighting, 1.0);
         #include <fog_fragment>

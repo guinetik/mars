@@ -110,6 +110,7 @@ function swapModel(entry) {
     if (child.isMesh) child.material = elevationMaterial
   })
   elevationMaterial.setElevationRange(entry.minR, entry.maxR)
+  elevationMaterial.needsUpdate = true
 
   lastGlobeRadius = entry.radius
   currentModel = entry.model
@@ -286,7 +287,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
     <LandmarkInfoCard
       :landmark="selectedLandmark"
       @close="selectedLandmark = null"
-      @explore="(lm) => router.push(`/explore/${lm.id}`)"
+      @explore-rover="(lm) => router.push(`/explore/${lm.id}`)"
+      @explore-foot="(lm) => router.push(`/explore-fps/${lm.id}`)"
     />
     <LandmarkLegend v-if="!isLoading" @filter="onFilter" />
   </div>

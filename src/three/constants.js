@@ -69,6 +69,7 @@ export const ROVER_ORBIT_PITCH_MAX = 1.3
 export const ROVER_WHEEL_ZOOM_FACTOR = 0.0032
 
 export const EXPLORABLE_LANDMARKS = [
+  // Geological
   'acidalia-planitia',
   'argyre-basin',
   'arsia-mons',
@@ -82,4 +83,21 @@ export const EXPLORABLE_LANDMARKS = [
   'syrtis-major',
   'utopia-planitia',
   'valles-marineris',
+  // Landing sites
+  'viking-1',
+  'viking-2',
+  'pathfinder',
+  'spirit',
+  'opportunity',
+  'phoenix',
+  'curiosity',
+  'insight',
+  'perseverance',
+  'mars-2',
+  'mars-3',
+  'mars-6',
+  'beagle-2',
+  'mars-polar-lander',
+  'schiaparelli',
+  'zhurong',
 ]

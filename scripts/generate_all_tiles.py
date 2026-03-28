@@ -11,16 +11,18 @@ EXAGGERATION = 6
 INPUT_TIFF = "data/Mars_HRSC_MOLA_BlendDEM_Global_200mp_v2.tif"
 OUTPUT_DIR = "output/terrain"
 
+# Polar caps get output as *-region IDs to match the explorable landmarks list
+POLAR_ID_MAP = {
+    "north-polar-cap": "north-polar-region",
+    "south-polar-cap": "south-polar-region",
+}
+
 def main():
     with open(LANDMARKS_PATH) as f:
         landmarks = json.load(f)
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # Only geological landmarks
-    landmarks = [lm for lm in landmarks if lm.get("type") == "geological"]
-
-    skipped = []
     results = []
 
     for lm in landmarks:
@@ -28,19 +30,20 @@ def main():
         lat = lm["lat"]
         lon = lm["lon"]
 
-        # Skip polar caps (script can't handle lat ±90)
-        if abs(lat) >= 89:
-            skipped.append(lid)
-            print(f"\n--- SKIPPING {lid} (lat={lat}, too close to pole) ---")
-            continue
+        # Remap polar cap IDs to polar region IDs
+        output_id = POLAR_ID_MAP.get(lid, lid)
 
-        # Use half the feature diameter as radius, clamped to [50, 500] km
-        diameter = lm.get("diameterKm", 100)
-        radius = min(500, max(50, diameter / 2))
+        # Geological: half diameter clamped to [50, 500] km
+        # Landing sites: fixed 50 km radius (rover-scale exploration area)
+        if lm.get("type") == "geological":
+            diameter = lm.get("diameterKm", 100)
+            radius = min(500, max(50, diameter / 2))
+        else:
+            radius = 50
 
-        output = os.path.join(OUTPUT_DIR, f"{lid}.glb")
+        output = os.path.join(OUTPUT_DIR, f"{output_id}.glb")
         print(f"\n{'='*60}")
-        print(f"Generating: {lid} (lat={lat}, lon={lon}, radius={radius}km)")
+        print(f"Generating: {output_id} (lat={lat}, lon={lon}, radius={radius}km)")
         print(f"{'='*60}")
 
         cmd = [
@@ -57,9 +60,9 @@ def main():
         result = subprocess.run(cmd, capture_output=False)
         if result.returncode == 0:
             size_mb = os.path.getsize(output) / (1024 * 1024)
-            results.append((lid, size_mb))
+            results.append((output_id, size_mb))
         else:
-            results.append((lid, -1))
+            results.append((output_id, -1))
 
     print(f"\n{'='*60}")
     print("SUMMARY")
@@ -72,8 +75,6 @@ def main():
         else:
             print(f"  {lid:30s}  FAILED")
     print(f"  {'TOTAL':30s} {total:6.1f} MB")
-    if skipped:
-        print(f"  Skipped (polar): {', '.join(skipped)}")
 
 
 if __name__ == "__main__":

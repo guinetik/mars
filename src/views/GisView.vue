@@ -16,7 +16,8 @@
     <LandmarkInfoCard
       :landmark="selectedLandmark"
       @close="selectedLandmark = null"
-      @explore="(lm) => router.push(`/explore/${lm.id}`)"
+      @explore-rover="(lm) => router.push(`/explore/${lm.id}`)"
+      @explore-foot="(lm) => router.push(`/explore-fps/${lm.id}`)"
     />
     <LoadingOverlay
       :is-loading="isLoading"
